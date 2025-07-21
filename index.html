@@ -4,398 +4,926 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4ToBeyond - Logic Puzzle Game</title>
-    <link href="frontend/dist/style.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+        :root {
+            /* Light theme variables */
+            --bg-primary: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            --bg-secondary: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            --bg-cta: linear-gradient(135deg, #1e293b 0%, #3b82f6 50%, #8b5cf6 100%);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-cta: #ffffff;
+            --border-color: #e2e8f0;
+            --border-hover: #cbd5e1;
+            --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --card-hover-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --title-gradient: linear-gradient(135deg, #1e293b 0%, #3b82f6 50%, #8b5cf6 100%);
+            --accent-line: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            --how-to-play-bg: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            --step-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            --particles-display: none;
+            --bg-animated: none;
+        }
+
+        [data-theme="dark"] {
+            /* Dark theme variables */
+            --bg-primary: #0a0a0a;
+            --bg-secondary: rgba(255, 255, 255, 0.03);
+            --bg-cta: linear-gradient(135deg, rgba(167, 139, 250, 0.1) 0%, rgba(6, 182, 212, 0.1) 50%, rgba(16, 185, 129, 0.1) 100%);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-cta: #ffffff;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --border-hover: rgba(255, 255, 255, 0.2);
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            --card-hover-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            --title-gradient: linear-gradient(135deg, #ffffff 0%, #a78bfa 50%, #06b6d4 100%);
+            --accent-line: linear-gradient(135deg, #a78bfa, #06b6d4);
+            --how-to-play-bg: rgba(255, 255, 255, 0.02);
+            --step-gradient: linear-gradient(135deg, #a78bfa, #06b6d4);
+            --particles-display: block;
+            --bg-animated: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.15) 0%, transparent 50%), radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #fafafa;
-            color: #1a1a1a;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
+
+        /* Animated background for dark theme */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-animated);
+            z-index: -1;
+            animation: drift 20s ease-in-out infinite;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        [data-theme="dark"] body::before {
+            opacity: 1;
+        }
+
+        @keyframes drift {
+            0%, 100% { 
+                transform: translate(0, 0) rotate(0deg);
+                filter: blur(60px);
+            }
+            33% { 
+                transform: translate(30px, -30px) rotate(1deg);
+                filter: blur(80px);
+            }
+            66% { 
+                transform: translate(-20px, 20px) rotate(-1deg);
+                filter: blur(70px);
+            }
+        }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 100;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            box-shadow: var(--card-shadow);
+        }
+
+        .theme-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--card-hover-shadow);
+            border-color: var(--border-hover);
+        }
+
+        .theme-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle:hover .theme-icon {
+            transform: rotate(180deg);
+        }
+
         .container {
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
-            padding: 1rem;
+            padding: 2rem 1rem;
+            position: relative;
+            z-index: 1;
         }
-        
+
         @media (min-width: 640px) {
             .container {
-                padding: 2rem;
-            }
-        }
-        
-        .header {
-            text-align: center;
-            margin: 2rem 0 3rem 0;
-        }
-        
-        @media (min-width: 640px) {
-            .header {
-                margin: 3rem 0 4rem 0;
-            }
-        }
-        
-        .title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #1a1a1a;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.02em;
-        }
-        
-        @media (min-width: 640px) {
-            .title {
-                font-size: 3.5rem;
-                margin-bottom: 1rem;
-            }
-        }
-        
-        .subtitle {
-            font-size: 1.1rem;
-            color: #666;
-            font-weight: 400;
-        }
-        
-        @media (min-width: 640px) {
-            .subtitle {
-                font-size: 1.25rem;
-            }
-        }
-        
-        .game-card {
-            background: white;
-            border: 2px solid #e5e5e5;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-        
-        .game-card:hover {
-            border-color: #d4d4d4;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            transform: translateY(-1px);
-        }
-        
-        .game-card.available:hover {
-            border-color: #10b981;
-        }
-        
-        .game-card.coming-soon {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        
-        .game-card.coming-soon:hover {
-            border-color: #e5e5e5;
-            transform: none;
-            box-shadow: none;
-        }
-        
-        @media (min-width: 640px) {
-            .game-card {
-                padding: 2rem;
-                margin-bottom: 1.5rem;
-            }
-        }
-        
-        .game-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-            display: block;
-        }
-        
-        .game-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 0.5rem;
-        }
-        
-        @media (min-width: 640px) {
-            .game-title {
-                font-size: 1.5rem;
-            }
-        }
-        
-        .game-description {
-            color: #666;
-            font-size: 0.95rem;
-            margin-bottom: 1.5rem;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-        
-        .status-available {
-            background-color: #d1fae5;
-            color: #065f46;
-        }
-        
-        .status-coming-soon {
-            background-color: #fef3c7;
-            color: #92400e;
-        }
-        
-        .cta-section {
-            text-align: center;
-            margin: 3rem 0 2rem 0;
-            padding: 2rem 1rem;
-            background: white;
-            border: 2px solid #e5e5e5;
-            border-radius: 12px;
-        }
-        
-        @media (min-width: 640px) {
-            .cta-section {
-                margin: 4rem 0 3rem 0;
                 padding: 3rem 2rem;
             }
         }
-        
-        .play-button {
-            background-color: #10b981;
-            color: white;
-            border: none;
-            padding: 0.875rem 2rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-block;
-            text-decoration: none;
+
+        /* Floating particles for dark theme */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            display: var(--particles-display);
         }
-        
-        .play-button:hover {
-            background-color: #059669;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: float 15s infinite linear;
         }
-        
-        @media (min-width: 640px) {
-            .play-button {
-                padding: 1rem 2.5rem;
-                font-size: 1.1rem;
+
+        .particle:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { left: 20%; animation-delay: 2s; }
+        .particle:nth-child(3) { left: 30%; animation-delay: 4s; }
+        .particle:nth-child(4) { left: 40%; animation-delay: 6s; }
+        .particle:nth-child(5) { left: 50%; animation-delay: 8s; }
+        .particle:nth-child(6) { left: 60%; animation-delay: 10s; }
+        .particle:nth-child(7) { left: 70%; animation-delay: 12s; }
+        .particle:nth-child(8) { left: 80%; animation-delay: 14s; }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) scale(1);
+                opacity: 0;
             }
         }
-        
-        .how-to-play {
-            background: white;
-            border: 2px solid #e5e5e5;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
+
+        .header {
+            text-align: center;
+            margin: 2rem 0 4rem 0;
+            position: relative;
         }
-        
+
+        @media (min-width: 640px) {
+            .header {
+                margin: 3rem 0 5rem 0;
+            }
+        }
+
+        .title {
+            font-size: clamp(3rem, 8vw, 5rem);
+            font-weight: 900;
+            background: var(--title-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            letter-spacing: -0.04em;
+            position: relative;
+            transition: all 0.5s ease;
+        }
+
+        [data-theme="dark"] .title {
+            text-shadow: 0 0 40px rgba(167, 139, 250, 0.3);
+        }
+
+        .title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: var(--accent-line);
+            border-radius: 2px;
+            transition: all 0.5s ease;
+        }
+
+        [data-theme="dark"] .title::after {
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                box-shadow: 0 0 5px rgba(167, 139, 250, 0.5);
+            }
+            to {
+                box-shadow: 0 0 20px rgba(167, 139, 250, 0.8), 0 0 30px rgba(6, 182, 212, 0.3);
+            }
+        }
+
+        .subtitle {
+            font-size: clamp(1.1rem, 3vw, 1.5rem);
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-top: 2rem;
+            transition: color 0.5s ease;
+        }
+
+        .game-cards {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 4rem;
+        }
+
+        @media (min-width: 768px) {
+            .game-cards {
+                gap: 2rem;
+                margin-bottom: 5rem;
+            }
+        }
+
+        .game-card {
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 2rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+        }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, 
+                transparent, 
+                rgba(255, 255, 255, 0.1), 
+                transparent);
+            transition: left 0.5s;
+        }
+
+        .game-card:hover::before {
+            left: 100%;
+        }
+
+        .game-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: var(--border-hover);
+            box-shadow: var(--card-hover-shadow);
+        }
+
+        .game-card.available:hover {
+            border-color: rgba(16, 185, 129, 0.5);
+        }
+
+        [data-theme="light"] .game-card.available:hover {
+            border-color: #10b981;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15);
+        }
+
+        [data-theme="dark"] .game-card.available:hover {
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.3),
+                0 0 30px rgba(16, 185, 129, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        .game-card.available::before {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        [data-theme="light"] .game-card.available::before {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .game-card.coming-soon {
+            opacity: 0.7;
+        }
+
+        .game-card.coming-soon:hover {
+            transform: translateY(-4px) scale(1.01);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        @media (min-width: 640px) {
+            .game-card {
+                padding: 2.5rem;
+            }
+        }
+
+        .game-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .game-icon {
+            font-size: 2.5rem;
+            margin-right: 1.25rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 70px;
+            height: 70px;
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] .game-icon {
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        }
+
+        .game-card.available .game-icon {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        [data-theme="light"] .game-card.available .game-icon {
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        }
+
+        .game-card:hover .game-icon {
+            transform: scale(1.1) rotateY(180deg);
+        }
+
+        .game-title {
+            font-size: clamp(1.25rem, 4vw, 1.75rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+            transition: color 0.5s ease;
+        }
+
+        .game-description {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+            transition: color 0.5s ease;
+        }
+
+        .game-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            padding: 0.6rem 1.2rem;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-available {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        [data-theme="light"] .status-available {
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .status-coming-soon {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+        }
+
+        [data-theme="light"] .status-coming-soon {
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+        }
+
+        .play-arrow {
+            font-size: 1.5rem;
+            color: #10b981;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .game-card.available:hover .play-arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .how-to-play {
+            background: var(--how-to-play-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 32px;
+            padding: 3rem;
+            margin-bottom: 4rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s ease;
+        }
+
+        [data-theme="light"] .how-to-play::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--accent-line);
+        }
+
         @media (min-width: 640px) {
             .how-to-play {
-                padding: 2rem;
-                margin-bottom: 3rem;
+                padding: 4rem;
+                margin-bottom: 5rem;
             }
         }
-        
+
         .how-to-play h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 1rem;
+            font-size: clamp(1.75rem, 5vw, 2.25rem);
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 3rem;
             text-align: center;
+            position: relative;
+            transition: color 0.5s ease;
         }
-        
-        @media (min-width: 640px) {
-            .how-to-play h3 {
-                font-size: 1.5rem;
-                margin-bottom: 1.5rem;
-            }
-        }
-        
+
         .steps {
             display: grid;
-            gap: 1rem;
+            gap: 2.5rem;
         }
-        
-        @media (min-width: 640px) {
+
+        @media (min-width: 768px) {
             .steps {
                 grid-template-columns: repeat(3, 1fr);
-                gap: 2rem;
+                gap: 3rem;
             }
         }
-        
+
         .step {
             text-align: center;
+            position: relative;
         }
-        
+
         .step-number {
-            width: 2rem;
-            height: 2rem;
-            background-color: #10b981;
+            width: 4rem;
+            height: 4rem;
+            background: var(--step-gradient);
             color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 600;
-            margin: 0 auto 0.75rem auto;
+            font-weight: 800;
+            font-size: 1.25rem;
+            margin: 0 auto 1.5rem auto;
+            position: relative;
+            z-index: 1;
+            transition: all 0.5s ease;
         }
-        
+
+        [data-theme="light"] .step-number {
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        [data-theme="dark"] .step-number {
+            box-shadow: 0 8px 25px rgba(167, 139, 250, 0.4);
+        }
+
+        .step-number::before {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            background: var(--step-gradient);
+            border-radius: 50%;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .step:hover .step-number::before {
+            opacity: 1;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 0.3; }
+        }
+
         .step-title {
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 0.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            transition: color 0.5s ease;
         }
-        
+
         .step-description {
-            color: #666;
-            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.6;
+            transition: color 0.5s ease;
         }
-        
+
+        .cta-section {
+            text-align: center;
+            margin: 4rem 0;
+            padding: 4rem 2rem;
+            background: var(--bg-cta);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 40px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s ease;
+        }
+
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.05) 0%, 
+                transparent 50%, 
+                rgba(255, 255, 255, 0.05) 100%);
+            pointer-events: none;
+        }
+
+        [data-theme="light"] .cta-section::before {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        }
+
+        @media (min-width: 640px) {
+            .cta-section {
+                padding: 5rem 3rem;
+            }
+        }
+
+        .cta-section h3 {
+            margin-bottom: 1.5rem;
+            font-size: clamp(1.75rem, 5vw, 2.5rem);
+            color: var(--text-cta);
+            font-weight: 800;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-section p {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2.5rem;
+            font-size: 1.2rem;
+            position: relative;
+            z-index: 1;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        [data-theme="light"] .cta-section p {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .play-button {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 1.25rem 3rem;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        [data-theme="light"] .play-button {
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        [data-theme="dark"] .play-button {
+            box-shadow: 
+                0 10px 30px rgba(16, 185, 129, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .play-button::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, #059669, #047857);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .play-button:hover::before {
+            opacity: 1;
+        }
+
+        .play-button:hover {
+            transform: translateY(-3px) scale(1.05);
+        }
+
+        [data-theme="light"] .play-button:hover {
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+        }
+
+        [data-theme="dark"] .play-button:hover {
+            box-shadow: 
+                0 15px 40px rgba(16, 185, 129, 0.6),
+                0 0 0 1px rgba(255, 255, 255, 0.2);
+        }
+
+        .play-button span {
+            position: relative;
+            z-index: 1;
+        }
+
         .footer {
             text-align: center;
-            color: #999;
-            font-size: 0.85rem;
-            margin-top: 3rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 4rem;
             padding-bottom: 2rem;
+            transition: color 0.5s ease;
         }
-        
+
         .modal {
             position: fixed;
             inset: 0;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 50;
+            z-index: 100;
             padding: 1rem;
         }
-        
+
         .modal.show {
             display: flex;
         }
-        
+
         .modal-content {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            max-width: 400px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 3rem;
+            max-width: 450px;
             width: 100%;
             text-align: center;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
+
+        [data-theme="light"] .modal-content {
+            background: white;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
         .modal-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        
-        .modal-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 0.75rem;
-        }
-        
-        .modal-text {
-            color: #666;
+            font-size: 4rem;
             margin-bottom: 1.5rem;
         }
-        
+
+        .modal-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            transition: color 0.5s ease;
+        }
+
+        .modal-text {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            font-size: 1.1rem;
+            transition: color 0.5s ease;
+        }
+
         .modal-button {
-            background-color: #6b7280;
+            background: linear-gradient(135deg, #6b7280, #4b5563);
             color: white;
             border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
-            font-weight: 500;
+            padding: 1rem 2.5rem;
+            border-radius: 16px;
+            font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s ease;
+            transition: all 0.3s ease;
+            font-size: 1rem;
         }
-        
+
         .modal-button:hover {
-            background-color: #4b5563;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(107, 114, 128, 0.4);
+        }
+
+        /* Entrance animations */
+        .fade-in {
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .game-card {
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .game-card:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .game-card:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .theme-toggle {
+                top: 1rem;
+                right: 1rem;
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .game-card:hover {
+                transform: translateY(-4px) scale(1.01);
+            }
+            
+            .play-button:hover {
+                transform: translateY(-2px) scale(1.02);
+            }
         }
     </style>
 </head>
-<body>
+<body data-theme="light">
+    <!-- Theme toggle button -->
+    <button class="theme-toggle" onclick="toggleTheme()">
+        <span class="theme-icon">🌙</span>
+        <span class="theme-text">Dark</span>
+    </button>
+
+    <!-- Floating particles for dark theme -->
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
     <div class="container">
         <!-- Header -->
-        <header class="header">
+        <header class="header fade-in">
             <h1 class="title">4ToBeyond</h1>
-            <p class="subtitle">A daily logic puzzle game</p>
+            <p class="subtitle" id="subtitle">Challenge your mind with daily logic puzzles</p>
         </header>
 
         <!-- Game Modes -->
-        <section>
+        <section class="game-cards">
             <div class="game-card available" onclick="window.location.href='gamesingleplayer.html'">
-                <span class="game-icon">🎯</span>
-                <h2 class="game-title">Daily Puzzle</h2>
-                <p class="game-description">Crack the code using logical deduction. New puzzle every day.</p>
-                <span class="status-badge status-available">Play Now</span>
+                <div class="game-header">
+                    <div class="game-icon">🎯</div>
+                    <h2 class="game-title" id="game1-title">Daily Puzzle</h2>
+                </div>
+                <p class="game-description" id="game1-desc">Crack the secret code using logical deduction. Perfect your strategy with unlimited attempts.</p>
+                <div class="game-footer">
+                    <span class="status-badge status-available">Play Now</span>
+                    <span class="play-arrow">→</span>
+                </div>
             </div>
 
             <div class="game-card coming-soon" onclick="showComingSoon('Multiplayer')">
-                <span class="game-icon">👥</span>
-                <h2 class="game-title">Multiplayer</h2>
-                <p class="game-description">Challenge friends and players worldwide in real-time matches.</p>
-                <span class="status-badge status-coming-soon">Coming Soon</span>
+                <div class="game-header">
+                    <div class="game-icon" id="game2-icon">👥</div>
+                    <h2 class="game-title" id="game2-title">Multiplayer Mode</h2>
+                </div>
+                <p class="game-description" id="game2-desc">Challenge friends and players worldwide. Compete in real-time matches and climb the leaderboards.</p>
+                <div class="game-footer">
+                    <span class="status-badge status-coming-soon">Coming Soon</span>
+                </div>
             </div>
 
             <div class="game-card coming-soon" onclick="showComingSoon('AI Challenge')">
-                <span class="game-icon">🤖</span>
-                <h2 class="game-title">AI Challenge</h2>
-                <p class="game-description">Test your skills against intelligent AI opponents.</p>
-                <span class="status-badge status-coming-soon">Coming Soon</span>
+                <div class="game-header">
+                    <div class="game-icon" id="game3-icon">🤖</div>
+                    <h2 class="game-title" id="game3-title">AI Challenge</h2>
+                </div>
+                <p class="game-description" id="game3-desc">Test your skills against intelligent AI opponents with adaptive difficulty levels.</p>
+                <div class="game-footer">
+                    <span class="status-badge status-coming-soon">Coming Soon</span>
+                </div>
             </div>
         </section>
 
         <!-- How to Play -->
-        <section class="how-to-play">
-            <h3>How to Play</h3>
+        <section class="how-to-play fade-in">
+            <h3 id="how-to-title">How to Play</h3>
             <div class="steps">
                 <div class="step">
                     <div class="step-number">1</div>
-                    <div class="step-title">Choose Length</div>
-                    <div class="step-description">Select code length from 4 to 7 digits</div>
+                    <div class="step-title" id="step1-title">Choose Difficulty</div>
+                    <div class="step-description" id="step1-desc">Select your code length from 4 to 7 digits to match your skill level</div>
                 </div>
                 <div class="step">
                     <div class="step-number">2</div>
-                    <div class="step-title">Make Guesses</div>
-                    <div class="step-description">Enter numbers and get position feedback</div>
+                    <div class="step-title" id="step2-title">Make Guesses</div>
+                    <div class="step-description" id="step2-desc">Enter number combinations and receive feedback on exact position matches</div>
                 </div>
                 <div class="step">
                     <div class="step-number">3</div>
-                    <div class="step-title">Solve Puzzle</div>
-                    <div class="step-description">Use logic to crack the exact code</div>
+                    <div class="step-title" id="step3-title">Crack the Code</div>
+                    <div class="step-description" id="step3-desc">Use logical deduction and strategy to solve the puzzle in minimum moves</div>
                 </div>
             </div>
         </section>
 
         <!-- Call to Action -->
-        <section class="cta-section">
-            <h3 style="margin-bottom: 1rem; font-size: 1.5rem; color: #1a1a1a;">Ready to challenge your mind?</h3>
-            <p style="color: #666; margin-bottom: 2rem;">Start with today's puzzle and see how quickly you can solve it.</p>
-            <a href="gamesingleplayer.html" class="play-button">Start Playing</a>
+        <section class="cta-section fade-in">
+            <h3 id="cta-title">Ready to test your logic?</h3>
+            <p id="cta-desc">Join thousands of players who sharpen their minds daily with our challenging puzzles.</p>
+            <a href="gamesingleplayer.html" class="play-button">
+                <span id="cta-button">🚀 Start Playing</span>
+            </a>
         </section>
 
         <!-- Footer -->
-        <footer class="footer">
-            <p>© 2025 4ToBeyond • Made for puzzle enthusiasts</p>
+        <footer class="footer fade-in">
+            <p id="footer-text">© 2025 4ToBeyond • Designed for puzzle enthusiasts worldwide</p>
         </footer>
     </div>
 
     <!-- Coming Soon Modal -->
     <div id="comingSoonModal" class="modal">
         <div class="modal-content">
-            <div class="modal-icon">🚧</div>
+            <div class="modal-icon" id="modal-icon">🚧</div>
             <h3 class="modal-title" id="modalTitle">Coming Soon!</h3>
             <p class="modal-text" id="modalText">This feature is currently in development.</p>
             <button class="modal-button" onclick="hideComingSoon()">Got it</button>
@@ -403,13 +931,111 @@
     </div>
 
     <script>
+        // Theme management
+        let currentTheme = localStorage.getItem('theme') || 'light';
+        
+        // Content for different themes
+        const themeContent = {
+            light: {
+                subtitle: "Challenge your mind with daily logic puzzles",
+                game1Title: "Daily Puzzle",
+                game1Desc: "Crack the secret code using logical deduction. Perfect your strategy with unlimited attempts.",
+                game2Icon: "👥",
+                game2Title: "Multiplayer Mode", 
+                game2Desc: "Challenge friends and players worldwide. Compete in real-time matches and climb the leaderboards.",
+                game3Icon: "🤖",
+                game3Title: "AI Challenge",
+                game3Desc: "Test your skills against intelligent AI opponents with adaptive difficulty levels.",
+                howToTitle: "How to Play",
+                step1Title: "Choose Difficulty",
+                step1Desc: "Select your code length from 4 to 7 digits to match your skill level",
+                step2Title: "Make Guesses", 
+                step2Desc: "Enter number combinations and receive feedback on exact position matches",
+                step3Title: "Crack the Code",
+                step3Desc: "Use logical deduction and strategy to solve the puzzle in minimum moves",
+                ctaTitle: "Ready to test your logic?",
+                ctaDesc: "Join thousands of players who sharpen their minds daily with our challenging puzzles.",
+                ctaButton: "🚀 Start Playing",
+                footerText: "© 2025 4ToBeyond • Designed for puzzle enthusiasts worldwide",
+                modalIcon: "🚧",
+                themeIcon: "🌙",
+                themeText: "Dark"
+            },
+            dark: {
+                subtitle: "Where logic meets elegance",
+                game1Title: "Solo Challenge", 
+                game1Desc: "Master the art of deduction. Crack codes, sharpen your mind, and perfect your strategy with every puzzle.",
+                game2Icon: "⚔️",
+                game2Title: "Battle Arena",
+                game2Desc: "Face the world's best minds. Compete in real-time matches and claim your place on the global leaderboard.",
+                game3Icon: "🧠", 
+                game3Title: "Neural Duel",
+                game3Desc: "Challenge our advanced AI. Experience adaptive difficulty that evolves with your playing style.",
+                howToTitle: "Master the Game",
+                step1Title: "Set the Stage",
+                step1Desc: "Choose your code complexity from 4 to 7 digits. Higher numbers, greater glory.",
+                step2Title: "Think & Strike",
+                step2Desc: "Make strategic guesses and analyze feedback. Every move reveals crucial information.",
+                step3Title: "Claim Victory", 
+                step3Desc: "Use pure logic to crack the code. Elegance in solution, excellence in execution.",
+                ctaTitle: "Ready to transcend limits?",
+                ctaDesc: "Join an elite community of thinkers who push the boundaries of logical reasoning every single day.",
+                ctaButton: "🚀 Begin Journey",
+                footerText: "© 2025 4ToBeyond • Crafted for visionaries and problem solvers",
+                modalIcon: "✨",
+                themeIcon: "☀️",
+                themeText: "Light"
+            }
+        };
+
+        function updateContent() {
+            const content = themeContent[currentTheme];
+            
+            document.getElementById('subtitle').textContent = content.subtitle;
+            document.getElementById('game1-title').textContent = content.game1Title;
+            document.getElementById('game1-desc').textContent = content.game1Desc;
+            document.getElementById('game2-icon').textContent = content.game2Icon;
+            document.getElementById('game2-title').textContent = content.game2Title;
+            document.getElementById('game2-desc').textContent = content.game2Desc;
+            document.getElementById('game3-icon').textContent = content.game3Icon;
+            document.getElementById('game3-title').textContent = content.game3Title;
+            document.getElementById('game3-desc').textContent = content.game3Desc;
+            document.getElementById('how-to-title').textContent = content.howToTitle;
+            document.getElementById('step1-title').textContent = content.step1Title;
+            document.getElementById('step1-desc').textContent = content.step1Desc;
+            document.getElementById('step2-title').textContent = content.step2Title;
+            document.getElementById('step2-desc').textContent = content.step2Desc;
+            document.getElementById('step3-title').textContent = content.step3Title;
+            document.getElementById('step3-desc').textContent = content.step3Desc;
+            document.getElementById('cta-title').textContent = content.ctaTitle;
+            document.getElementById('cta-desc').textContent = content.ctaDesc;
+            document.getElementById('cta-button').textContent = content.ctaButton;
+            document.getElementById('footer-text').textContent = content.footerText;
+            document.getElementById('modal-icon').textContent = content.modalIcon;
+            
+            document.querySelector('.theme-icon').textContent = content.themeIcon;
+            document.querySelector('.theme-text').textContent = content.themeText;
+        }
+
+        function toggleTheme() {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.body.setAttribute('data-theme', currentTheme);
+            localStorage.setItem('theme', currentTheme);
+            updateContent();
+        }
+
         function showComingSoon(feature) {
             const modal = document.getElementById('comingSoonModal');
             const title = document.getElementById('modalTitle');
             const text = document.getElementById('modalText');
             
-            title.textContent = `${feature} Coming Soon!`;
-            text.textContent = `${feature} is currently in development. Stay tuned for updates!`;
+            if (currentTheme === 'dark') {
+                title.textContent = `${feature} - Coming Soon`;
+                text.textContent = `${feature} is being carefully crafted to deliver an extraordinary experience. Stay tuned for something remarkable.`;
+            } else {
+                title.textContent = `${feature} Coming Soon!`;
+                text.textContent = `${feature} is currently in development. We're working hard to bring you this exciting feature!`;
+            }
             
             modal.classList.add('show');
         }
@@ -419,17 +1045,52 @@
             modal.classList.remove('show');
         }
 
-        // Close modal when clicking outside
+        // Enhanced modal interactions
         document.getElementById('comingSoonModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 hideComingSoon();
             }
         });
 
-        // Close modal with Escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 hideComingSoon();
+            }
+        });
+
+        // Initialize theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.setAttribute('data-theme', currentTheme);
+            updateContent();
+        });
+
+        // Add subtle parallax effect for dark theme
+        document.addEventListener('mousemove', function(e) {
+            if (currentTheme === 'dark') {
+                const cards = document.querySelectorAll('.game-card');
+                const x = e.clientX / window.innerWidth;
+                const y = e.clientY / window.innerHeight;
+
+                cards.forEach((card, index) => {
+                    const speed = (index + 1) * 0.5;
+                    const xPos = (x - 0.5) * speed;
+                    const yPos = (y - 0.5) * speed;
+                    
+                    card.style.transform = `translate(${xPos}px, ${yPos}px)`;
+                });
+            }
+        });
+
+        // Reset transforms when switching to light theme
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.theme-toggle')) {
+                setTimeout(() => {
+                    if (currentTheme === 'light') {
+                        document.querySelectorAll('.game-card').forEach(card => {
+                            card.style.transform = '';
+                        });
+                    }
+                }, 100);
             }
         });
     </script>

@@ -4,84 +4,940 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exact Match - Logic Game</title>
-    <link href="frontend/dist/style.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-</head>
-<body class="font-inter gradient-bg min-h-screen p-3 sm:p-5">
-    <!-- Back to Home Button -->
-    <button onclick="window.location.href='index.html'" class="fixed top-3 left-3 sm:top-5 sm:left-5 z-50 bg-white/20 hover:bg-white/30 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold transition-all duration-300 backdrop-blur-md border border-white/20 hover:scale-105 shadow-lg text-sm sm:text-base">
-        ← Back to Home
-    </button>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Light theme variables */
+            --bg-primary: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --bg-secondary: rgba(255, 255, 255, 0.9);
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --bg-input: rgba(255, 255, 255, 0.95);
+            --bg-button-primary: linear-gradient(135deg, #3b82f6, #06b6d4);
+            --bg-button-secondary: linear-gradient(135deg, #10b981, #059669);
+            --bg-button-danger: linear-gradient(135deg, #ef4444, #ec4899);
+            --bg-setup: rgba(248, 250, 252, 0.8);
+            --bg-progress: rgba(255, 255, 255, 0.9);
+            --bg-table-header: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-white: #ffffff;
+            --text-input: #1f2937;
+            --border-color: rgba(226, 232, 240, 0.5);
+            --border-input: rgba(203, 213, 225, 0.6);
+            --shadow-card: 0 10px 25px rgba(0, 0, 0, 0.1);
+            --shadow-button: 0 4px 15px rgba(59, 130, 246, 0.3);
+            --backdrop-blur: blur(10px);
+            --particles-display: none;
+            --bg-animated: none;
+        }
 
-    <div class="max-w-6xl mx-auto pt-12 sm:pt-0">
+        [data-theme="dark"] {
+            /* Dark theme variables */
+            --bg-primary: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --bg-secondary: rgba(30, 41, 59, 0.6);
+            --bg-card: rgba(30, 41, 59, 0.6);
+            --bg-input: rgba(51, 65, 85, 0.8);
+            --bg-button-primary: linear-gradient(135deg, #6366f1, #06b6d4);
+            --bg-button-secondary: linear-gradient(135deg, #10b981, #059669);
+            --bg-button-danger: linear-gradient(135deg, #ef4444, #ec4899);
+            --bg-setup: rgba(30, 41, 59, 0.4);
+            --bg-progress: rgba(30, 41, 59, 0.6);
+            --bg-table-header: linear-gradient(135deg, #4f46e5, #7c3aed);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-white: #ffffff;
+            --text-input: #ffffff;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --border-input: rgba(255, 255, 255, 0.2);
+            --shadow-card: 0 20px 40px rgba(0, 0, 0, 0.3);
+            --shadow-button: 0 8px 25px rgba(99, 102, 241, 0.4);
+            --backdrop-blur: blur(20px);
+            --particles-display: block;
+            --bg-animated: radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.2) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.15) 0%, transparent 50%), radial-gradient(circle at 40% 40%, rgba(6, 182, 212, 0.2) 0%, transparent 50%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            padding: 0.75rem;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        @media (min-width: 640px) {
+            body {
+                padding: 1.25rem;
+            }
+        }
+
+        /* Animated background for dark theme */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-animated);
+            z-index: -1;
+            animation: drift 20s ease-in-out infinite;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        [data-theme="dark"] body::before {
+            opacity: 1;
+        }
+
+        @keyframes drift {
+            0%, 100% { 
+                transform: translate(0, 0) rotate(0deg);
+                filter: blur(60px);
+            }
+            33% { 
+                transform: translate(20px, -20px) rotate(1deg);
+                filter: blur(80px);
+            }
+            66% { 
+                transform: translate(-15px, 15px) rotate(-1deg);
+                filter: blur(70px);
+            }
+        }
+
+        /* Floating particles for dark theme */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            display: var(--particles-display);
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: float 15s infinite linear;
+        }
+
+        .particle:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { left: 20%; animation-delay: 2s; }
+        .particle:nth-child(3) { left: 30%; animation-delay: 4s; }
+        .particle:nth-child(4) { left: 40%; animation-delay: 6s; }
+        .particle:nth-child(5) { left: 50%; animation-delay: 8s; }
+        .particle:nth-child(6) { left: 60%; animation-delay: 10s; }
+        .particle:nth-child(7) { left: 70%; animation-delay: 12s; }
+        .particle:nth-child(8) { left: 80%; animation-delay: 14s; }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* Back button */
+        .back-button {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 50;
+            background: var(--bg-secondary);
+            backdrop-filter: var(--backdrop-blur);
+            color: var(--text-primary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-card);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        @media (min-width: 640px) {
+            .back-button {
+                top: 1.25rem;
+                left: 1.25rem;
+                padding: 0.5rem 1rem;
+                font-size: 1rem;
+            }
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px) scale(1.05);
+            border-color: var(--border-input);
+        }
+
+        .container {
+            max-width: 96rem;
+            margin: 0 auto;
+            padding-top: 3rem;
+        }
+
+        @media (min-width: 640px) {
+            .container {
+                padding-top: 0;
+            }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            animation: slideUp 0.8s ease-out;
+        }
+
+        @media (min-width: 640px) {
+            .header {
+                margin-bottom: 2.5rem;
+            }
+        }
+
+        .title {
+            font-size: clamp(2rem, 8vw, 4rem);
+            font-weight: 900;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+            transition: color 0.5s ease;
+        }
+
+        @media (min-width: 640px) {
+            .title {
+                margin-bottom: 0.75rem;
+            }
+        }
+
+        .subtitle {
+            font-size: clamp(1rem, 3vw, 1.25rem);
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: color 0.5s ease;
+        }
+
+        /* Main game card */
+        .game-card {
+            border-radius: 1.5rem;
+            padding: 1rem;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            backdrop-filter: var(--backdrop-blur);
+            transition: all 0.5s ease;
+        }
+
+        @media (min-width: 640px) {
+            .game-card {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .game-card {
+                padding: 2.5rem;
+            }
+        }
+
+        /* Game setup section */
+        .game-setup {
+            background: var(--bg-setup);
+            backdrop-filter: var(--backdrop-blur);
+            padding: 1rem;
+            border-radius: 1rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.5s ease;
+        }
+
+        @media (min-width: 640px) {
+            .game-setup {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+        }
+
+        .setup-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        @media (min-width: 640px) {
+            .setup-content {
+                flex-direction: row;
+                gap: 2rem;
+            }
+        }
+
+        .length-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+        }
+
+        @media (min-width: 640px) {
+            .length-selector {
+                width: auto;
+            }
+        }
+
+        .length-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            transition: color 0.5s ease;
+        }
+
+        @media (min-width: 640px) {
+            .length-label {
+                font-size: 1.125rem;
+            }
+        }
+
+        .length-select {
+            background: var(--bg-input);
+            border: 2px solid var(--border-input);
+            border-radius: 0.75rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-input);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            backdrop-filter: var(--backdrop-blur);
+        }
+
+        @media (min-width: 640px) {
+            .length-select {
+                padding: 0.75rem 1.25rem;
+                font-size: 1rem;
+                flex: none;
+                min-width: 8rem;
+            }
+        }
+
+        .length-select:hover {
+            border-color: #3b82f6;
+        }
+
+        .length-select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        .length-select option {
+            color: #374151;
+        }
+
+        .new-game-btn {
+            background: var(--bg-button-primary);
+            color: var(--text-white);
+            font-weight: 700;
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-button);
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            font-size: 0.875rem;
+        }
+
+        @media (min-width: 640px) {
+            .new-game-btn {
+                padding: 0.75rem 2rem;
+                width: auto;
+                font-size: 1rem;
+            }
+        }
+
+        .new-game-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Input section */
+        .input-section {
+            background: var(--bg-progress);
+            backdrop-filter: var(--backdrop-blur);
+            padding: 1rem;
+            border-radius: 1rem;
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.5s ease;
+        }
+
+        @media (min-width: 640px) {
+            .input-section {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .input-section {
+                padding: 2rem;
+            }
+        }
+
+        .input-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            transition: color 0.5s ease;
+        }
+
+        @media (min-width: 640px) {
+            .input-title {
+                font-size: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+        }
+
+        .input-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            justify-content: center;
+            align-items: center;
+        }
+
+        @media (min-width: 640px) {
+            .input-controls {
+                flex-direction: row;
+                gap: 1rem;
+            }
+        }
+
+        .guess-input {
+            background: var(--bg-input);
+            border: 2px solid var(--border-input);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text-input);
+            text-align: center;
+            width: 100%;
+            letter-spacing: 0.1em;
+            transition: all 0.3s ease;
+            backdrop-filter: var(--backdrop-blur);
+        }
+
+        @media (min-width: 640px) {
+            .guess-input {
+                padding: 1rem 1.5rem;
+                font-size: 1.25rem;
+                min-width: 12rem;
+                width: auto;
+            }
+        }
+
+        .guess-input:focus {
+            outline: none;
+            transform: scale(1.02);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+        }
+
+        .submit-btn {
+            background: var(--bg-button-secondary);
+            color: var(--text-white);
+            font-weight: 700;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            font-size: 0.875rem;
+        }
+
+        @media (min-width: 640px) {
+            .submit-btn {
+                padding: 1rem 2rem;
+                width: auto;
+                font-size: 1rem;
+            }
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .feedback {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            background: var(--bg-setup);
+            border: 2px solid var(--border-input);
+            min-height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.5s ease;
+            backdrop-filter: var(--backdrop-blur);
+        }
+
+        @media (min-width: 640px) {
+            .feedback {
+                font-size: 1.25rem;
+                margin-top: 1.5rem;
+                padding: 1rem;
+                min-height: 4rem;
+            }
+        }
+
+        /* Grid layout */
+        .game-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 1024px) {
+            .game-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 2rem;
+                margin-bottom: 2rem;
+            }
+        }
+
+        /* Progress and strategy sections */
+        .progress-section,
+        .strategy-section {
+            border-radius: 1rem;
+            padding: 1rem;
+            box-shadow: var(--shadow-card);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+            background: var(--bg-progress);
+            backdrop-filter: var(--backdrop-blur);
+        }
+
+        @media (min-width: 640px) {
+            .progress-section,
+            .strategy-section {
+                padding: 1.5rem;
+            }
+        }
+
+        .progress-section:hover,
+        .strategy-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] .progress-section:hover,
+        [data-theme="dark"] .strategy-section:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            transition: color 0.5s ease;
+        }
+
+        @media (min-width: 640px) {
+            .section-title {
+                font-size: 1.25rem;
+                margin-bottom: 1.25rem;
+            }
+        }
+
+        .turn-counter {
+            background: var(--bg-button-primary);
+            color: var(--text-white);
+            padding: 0.375rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: inline-block;
+            transition: all 0.5s ease;
+        }
+
+        @media (min-width: 640px) {
+            .turn-counter {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+                margin-bottom: 1rem;
+            }
+        }
+
+        /* Table styles */
+        .history-table-container {
+            overflow: hidden;
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-card);
+        }
+
+        .history-table {
+            width: 100%;
+            min-width: 17.5rem;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        .table-header {
+            background: var(--bg-table-header);
+            color: var(--text-white);
+        }
+
+        .table-header th {
+            padding: 0.5rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        @media (min-width: 640px) {
+            .table-header th {
+                padding: 1rem 0.75rem;
+                font-size: 1rem;
+            }
+        }
+
+        .table-body tr {
+            background: var(--bg-input);
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .table-body tr:hover {
+            background: var(--bg-setup);
+        }
+
+        .table-body td {
+            padding: 0.5rem;
+            text-align: center;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.75rem;
+        }
+
+        @media (min-width: 640px) {
+            .table-body td {
+                padding: 0.75rem;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Strategy grid */
+        .strategy-description {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            transition: color 0.5s ease;
+        }
+
+        @media (min-width: 640px) {
+            .strategy-description {
+                font-size: 0.875rem;
+                margin-bottom: 1rem;
+            }
+        }
+
+        .status-legend {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        @media (min-width: 640px) {
+            .status-item {
+                font-size: 0.875rem;
+            }
+        }
+
+        .status-no { color: #fca5a5; }
+        .status-yes { color: #86efac; }
+        .status-empty { color: var(--text-secondary); }
+        .status-separator { color: var(--text-secondary); margin: 0 0.25rem; }
+
+        .elimination-grid {
+            display: inline-grid;
+            gap: 1px;
+            background: var(--border-color);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            min-width: 15rem;
+            transition: all 0.5s ease;
+        }
+
+        .elimination-grid.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+        .elimination-grid.grid-cols-5 { grid-template-columns: repeat(5, 1fr); }
+        .elimination-grid.grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+        .elimination-grid.grid-cols-7 { grid-template-columns: repeat(7, 1fr); }
+        .elimination-grid.grid-cols-10 { grid-template-columns: repeat(10, 1fr); }
+
+        .grid-cell {
+            background: var(--bg-input);
+            padding: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-primary);
+            font-size: 0.75rem;
+            min-height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (min-width: 640px) {
+            .grid-cell {
+                font-size: 0.875rem;
+                min-height: 2.5rem;
+            }
+        }
+
+        .grid-cell:hover {
+            background: var(--bg-setup);
+            transform: scale(1.05);
+        }
+
+        .grid-cell.eliminated {
+            background: #fca5a5;
+            color: #7f1d1d;
+        }
+
+        .grid-cell.confirmed {
+            background: #86efac;
+            color: #14532d;
+        }
+
+        /* Win message */
+        .win-message {
+            background: var(--bg-button-secondary);
+            color: var(--text-white);
+            padding: 1rem;
+            border-radius: 1rem;
+            text-align: center;
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+            transition: all 0.5s ease;
+        }
+
+        @media (min-width: 640px) {
+            .win-message {
+                padding: 1.5rem;
+                font-size: 1.25rem;
+                margin-bottom: 2rem;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .win-message {
+                padding: 2rem;
+                font-size: 1.5rem;
+            }
+        }
+
+        .win-message.hidden {
+            display: none;
+        }
+
+        /* Reset button */
+        .reset-container {
+            text-align: center;
+        }
+
+        .reset-btn {
+            background: var(--bg-button-danger);
+            color: var(--text-white);
+            font-weight: 700;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        @media (min-width: 640px) {
+            .reset-btn {
+                padding: 1rem 2rem;
+                font-size: 1rem;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .reset-btn {
+                padding: 1rem 2.5rem;
+            }
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+
+        /* Animations */
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .game-card {
+            animation: slideUp 0.8s ease-out 0.2s both;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .back-button {
+                font-size: 0.75rem;
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <!-- Floating particles for dark theme -->
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- Back to Home Button -->
+    <a href="index.html" class="back-button">
+        <span>←</span>
+        <span class="back-text">Back</span>
+    </a>
+
+    <div class="container">
         <!-- Header -->
-        <div class="text-center mb-6 sm:mb-10 animate-slide-up">
-            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-2 sm:mb-3 tracking-tight">
-                🎯 EXACT MATCH
-            </h1>
-            <p class="text-lg sm:text-xl text-white/80 font-medium">
-                Crack the code with perfect precision
-            </p>
+        <div class="header">
+            <h1 class="title" id="main-title">🎯 EXACT MATCH</h1>
+            <p class="subtitle" id="main-subtitle">Crack the code with perfect precision</p>
         </div>
 
         <!-- Game Card -->
-        <div class="rounded-3xl p-4 sm:p-6 lg:p-10 shadow-2xl border border-white/10">
+        <div class="game-card">
             <!-- Game Setup -->
-            <div class="bg-gradient-to-r from-slate-50/10 to-slate-100/10 p-4 sm:p-6 rounded-2xl mb-6 sm:mb-8 border border-white/10">
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
-                    <div class="flex items-center gap-3 w-full sm:w-auto">
-                        <label class="text-base sm:text-lg font-semibold text-white" for="codeLength">
+            <div class="game-setup">
+                <div class="setup-content">
+                    <div class="length-selector">
+                        <label class="length-label" for="codeLength">
                             Code Length:
                         </label>
-                        <select id="codeLength" class="bg-white/10 border-2 border-white/20 rounded-xl px-4 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-semibold text-white cursor-pointer hover:border-blue-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100/30 transition-all flex-1 sm:flex-none sm:min-w-32">
-                            <option value="4" class="text-gray-800">4 digits</option>
-                            <option value="5" class="text-gray-800">5 digits</option>
-                            <option value="6" class="text-gray-800">6 digits</option>
-                            <option value="7" class="text-gray-800">7 digits</option>
+                        <select id="codeLength" class="length-select">
+                            <option value="4">4 digits</option>
+                            <option value="5">5 digits</option>
+                            <option value="6">6 digits</option>
+                            <option value="7">7 digits</option>
                         </select>
                     </div>
-                    <button onclick="newGame()" class="bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-bold px-6 sm:px-8 py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-sm sm:text-base">
+                    <button onclick="newGame()" class="new-game-btn">
                         🎮 New Game
                     </button>
                 </div>
             </div>
 
             <!-- Input Section -->
-            <div class="gradient-card p-4 sm:p-6 lg:p-8 rounded-2xl text-white text-center mb-6 sm:mb-8">
-                <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">🚀 Make Your Guess</h2>
-                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
+            <div class="input-section">
+                <h2 class="input-title">🚀 Make Your Guess</h2>
+                <div class="input-controls">
                     <input type="text" id="guessInput" placeholder="Enter your guess" maxlength="7" 
-                           class="bg-white/95 border-2 border-white/30 rounded-xl px-4 sm:px-6 py-3 sm:py-4 text-lg sm:text-xl font-bold text-gray-800 text-center w-full sm:min-w-48 tracking-wider focus:bg-white focus:ring-4 focus:ring-white/30 focus:scale-105 transition-all">
+                           class="guess-input">
                     <button id="submitBtn" onclick="submitGuess()" 
-                            class="bg-gradient-to-r from-green-500 to-emerald-400 hover:from-green-600 hover:to-emerald-500 text-white font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-sm sm:text-base">
+                            class="submit-btn">
                         ⚡ Submit
                     </button>
                 </div>
-                <div id="feedback" class="text-base sm:text-xl font-semibold mt-4 sm:mt-6 p-3 sm:p-4 rounded-xl bg-white/20 border-2 border-white/30 min-h-12 sm:min-h-16 flex items-center justify-center">
+                <div id="feedback" class="feedback">
                     Select a code length and start a new game!
                 </div>
             </div>
 
             <!-- Game Progress and Strategy Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
+            <div class="game-grid">
                 <!-- Game Progress Section -->
-                <div class="rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-white/10">
-                    <h3 class="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-5">📊 Game Progress</h3>
-                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4 inline-block">
+                <div class="progress-section">
+                    <h3 class="section-title">📊 Game Progress</h3>
+                    <div class="turn-counter">
                         Turn: <span id="turnCounter">0</span>
                     </div>
-                    <div class="overflow-hidden rounded-xl shadow-lg">
-                        <div class="overflow-x-auto">
-                            <table class="w-full min-w-[280px]">
+                    <div class="history-table-container">
+                        <div class="table-scroll">
+                            <table class="history-table">
                                 <thead>
-                                    <tr class="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-                                        <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Turn</th>
-                                        <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Guess</th>
-                                        <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Correct</th>
+                                    <tr class="table-header">
+                                        <th>Turn</th>
+                                        <th>Guess</th>
+                                        <th>Correct</th>
                                     </tr>
                                 </thead>
-                                <tbody id="historyBody">
+                                <tbody id="historyBody" class="table-body">
                                 </tbody>
                             </table>
                         </div>
@@ -89,38 +945,110 @@
                 </div>
 
                 <!-- Interactive Strategy Grid -->
-                <div class="rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-white/10">
-                    <h3 class="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-5">🎯 Strategy Grid</h3>
-                    <p class="text-xs sm:text-sm text-white/80 mb-3 sm:mb-4">
-                        Click cells: <span class="inline-flex items-center gap-1 flex-wrap">
-                            <span class="text-red-300 font-bold text-xs sm:text-sm">✗ No</span>
-                            <span class="mx-1 text-white/60">→</span>
-                            <span class="text-green-300 font-bold text-xs sm:text-sm">✓ Yes</span>
-                            <span class="mx-1 text-white/60">→</span>
-                            <span class="text-white/60 text-xs sm:text-sm">Empty</span>
+                <div class="strategy-section">
+                    <h3 class="section-title">🎯 Strategy Grid</h3>
+                    <p class="strategy-description">
+                        Click cells: <span class="status-legend">
+                            <span class="status-item"><span class="status-no">✗ No</span></span>
+                            <span class="status-separator">→</span>
+                            <span class="status-item"><span class="status-yes">✓ Yes</span></span>
+                            <span class="status-separator">→</span>
+                            <span class="status-item"><span class="status-empty">Empty</span></span>
                         </span>
                     </p>
-                    <div class="overflow-x-auto">
-                        <div id="eliminationGrid" class="inline-grid gap-px bg-white/10 rounded-xl overflow-hidden min-w-[240px]">
+                    <div class="table-scroll">
+                        <div id="eliminationGrid" class="elimination-grid">
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Win Message -->
-            <div id="winMessage" class="hidden bg-gradient-to-r from-green-500 to-emerald-400 text-white p-4 sm:p-6 lg:p-8 rounded-2xl text-center text-lg sm:text-xl lg:text-2xl font-bold mb-6 sm:mb-8">
+            <div id="winMessage" class="win-message hidden">
                 🎉 VICTORY! You cracked the code! 🎉
             </div>
 
             <!-- Reset Button -->
-            <div class="text-center">
-                <button onclick="confirmReset()" class="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold px-6 sm:px-8 lg:px-10 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all text-sm sm:text-base">
+            <div class="reset-container">
+                <button onclick="confirmReset()" class="reset-btn">
                     🔄 Reset Game
                 </button>
             </div>
         </div>
     </div>
 
-    <script src="frontend/src/script.js"></script>
+    <script>
+        // Theme management - inherit from localStorage
+        let currentTheme = localStorage.getItem('theme') || 'light';
+        
+        // Content for different themes
+        const themeContent = {
+            light: {
+                title: "🎯 EXACT MATCH",
+                subtitle: "Crack the code with perfect precision"
+            },
+            dark: {
+                title: "🎯 NEURAL PRECISION",
+                subtitle: "Decode the matrix with algorithmic mastery"
+            }
+        };
+
+        function updateContent() {
+            const content = themeContent[currentTheme];
+            
+            document.getElementById('main-title').textContent = content.title;
+            document.getElementById('main-subtitle').textContent = content.subtitle;
+        }
+
+        // Initialize theme on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.setAttribute('data-theme', currentTheme);
+            updateContent();
+        });
+
+        // Placeholder functions for game logic (replace with your actual game code)
+        function newGame() {
+            console.log('Starting new game...');
+            // Your game initialization logic here
+            document.getElementById('feedback').textContent = 'Game started! Make your first guess.';
+            document.getElementById('turnCounter').textContent = '0';
+            document.getElementById('historyBody').innerHTML = '';
+            document.getElementById('winMessage').classList.add('hidden');
+        }
+
+        function submitGuess() {
+            console.log('Submitting guess...');
+            // Your guess submission logic here
+            const guess = document.getElementById('guessInput').value;
+            if (guess) {
+                document.getElementById('feedback').textContent = `You guessed: ${guess}`;
+                document.getElementById('guessInput').value = '';
+            }
+        }
+
+        function confirmReset() {
+            if (confirm('Are you sure you want to reset the game?')) {
+                console.log('Resetting game...');
+                // Your reset logic here
+                document.getElementById('feedback').textContent = 'Select a code length and start a new game!';
+                document.getElementById('turnCounter').textContent = '0';
+                document.getElementById('historyBody').innerHTML = '';
+                document.getElementById('winMessage').classList.add('hidden');
+                document.getElementById('guessInput').value = '';
+            }
+        }
+
+        // Allow Enter key to submit guess
+        document.getElementById('guessInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitGuess();
+            }
+        });
+
+        // Only allow numbers in the input
+        document.getElementById('guessInput').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    </script>
 </body>
-</html> 
+</html>

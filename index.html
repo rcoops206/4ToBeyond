@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4ToBeyond - Logic Games</title>
+    <link href="frontend/dist/style.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body class="font-inter gradient-bg min-h-screen p-5">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-10 animate-slide-up">
+            <h1 class="text-6xl font-black text-white mb-3 tracking-tight">
+                🎯 4ToBeyond
+            </h1>
+            <p class="text-xl text-white/80 font-medium">
+                Master the Art of Logic
+            </p>
+        </div>
+
+        <!-- Game Mode Cards -->
+        <div class="grid md:grid-cols-3 gap-8 mb-8">
+            <!-- Singleplayer Card -->
+            <div class="rounded-2xl p-6 shadow-xl border border-white/10 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">🎯</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2">Singleplayer</h2>
+                    <p class="text-white/80 text-sm">
+                        Practice your logical deduction skills solo
+                    </p>
+                </div>
+                <button onclick="window.location.href='gamesingleplayer.html'" class="bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full">
+                    Play Solo
+                </button>
+            </div>
+
+            <!-- AI Opponent Card -->
+            <div class="rounded-2xl p-6 shadow-xl border border-white/10 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-r from-pink-500 to-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">🤖</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2">AI Opponent</h2>
+                    <p class="text-white/80 text-sm">
+                        Challenge intelligent AI strategies
+                    </p>
+                </div>
+                <button onclick="showComingSoon('AI')" class="bg-gradient-to-r from-pink-500 to-red-400 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full opacity-75">
+                    Coming Soon
+                </button>
+            </div>
+
+            <!-- Multiplayer Card -->
+            <div class="rounded-2xl p-6 shadow-xl border border-white/10 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-r from-purple-500 to-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-2xl">👥</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2">Multiplayer</h2>
+                    <p class="text-white/80 text-sm">
+                        Compete with players worldwide
+                    </p>
+                </div>
+                <button onclick="showComingSoon('Multiplayer')" class="bg-gradient-to-r from-purple-500 to-indigo-400 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full opacity-75">
+                    Coming Soon
+                </button>
+            </div>
+        </div>
+
+        <!-- How to Play -->
+        <div class="rounded-2xl p-6 shadow-xl border border-white/10 mb-8">
+            <h2 class="text-2xl font-bold text-white mb-4 text-center">How to Play</h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <div class="w-12 h-12 bg-blue-500/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <span class="text-xl">1️⃣</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Choose Length</h3>
+                    <p class="text-white/80 text-sm">Select 4-7 digit code difficulty</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-12 h-12 bg-purple-500/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <span class="text-xl">2️⃣</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Make Guess</h3>
+                    <p class="text-white/80 text-sm">Enter numbers and get position feedback</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-12 h-12 bg-green-500/30 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <span class="text-xl">3️⃣</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Crack Code</h3>
+                    <p class="text-white/80 text-sm">Use logic to find exact combination</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="text-center">
+            <button onclick="window.location.href='gamesingleplayer.html'" class="bg-gradient-to-r from-green-500 to-emerald-400 hover:from-green-600 hover:to-emerald-500 text-white font-bold px-12 py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 text-lg">
+                🚀 Start Playing
+            </button>
+        </div>
+    </div>
+
+    <!-- Coming Soon Modal -->
+    <div id="comingSoonModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="rounded-2xl p-8 max-w-md mx-4 text-center border border-white/10 bg-gradient-to-r from-slate-50/10 to-slate-100/10">
+            <div class="w-16 h-16 bg-yellow-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span class="text-3xl">🚧</span>
+            </div>
+            <h3 class="text-2xl font-bold text-white mb-4" id="modalTitle">Coming Soon!</h3>
+            <p class="text-white/80 mb-6" id="modalText">This game mode is in development.</p>
+            <button onclick="hideComingSoon()" class="bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-bold py-3 px-8 rounded-xl hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+                Got it!
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function showComingSoon(mode) {
+            const modal = document.getElementById('comingSoonModal');
+            const title = document.getElementById('modalTitle');
+            const text = document.getElementById('modalText');
+            
+            title.textContent = `${mode} Mode Coming Soon!`;
+            text.textContent = `The ${mode} mode is currently in development.`;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideComingSoon() {
+            const modal = document.getElementById('comingSoonModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('comingSoonModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideComingSoon();
+                }
+            });
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    hideComingSoon();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

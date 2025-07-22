@@ -730,10 +730,10 @@
 
         <!-- Call to Action -->
         <section class="cta-section fade-in">
-            <h3>Join The Waiting List?</h3>
+            <h3>Join The Waiting List</h3>
             <p>Be part of our early community and skip the paywall forever. Join the waitlist now and you’ll get free access to all premium features when we launch them— no catches, just perks for early believers.</p>
-            <a class="play-button">
-                <span>🚀 Begin Journey</span>
+            <a href="#" class="play-button" onclick="showWaitlistModal()">
+                <span>🚀 Waiting List Sign Up</span>
             </a>
         </section>
 
@@ -752,6 +752,21 @@
             <button class="modal-button" onclick="hideComingSoon()">Understood</button>
         </div>
     </div>
+
+    <!-- Waitlist Modal -->
+     <div id="waitlistModal" class="modal">
+    <div class="modal-content">
+        <h3>Join the Waiting List 🚀</h3>
+        <p>Get early access to premium features. No spam — just perks.</p>
+        <form id="waitlistForm" onsubmit="submitWaitlist(event)">
+            <input type="text" id="name" name="name" placeholder="Your Name" required />
+            <input type="email" id="email" name="email" placeholder="Your Email" required />
+            <button type="submit" class="modal-button">Join Now</button>
+        </form>
+        <button class="modal-button" onclick="hideWaitlistModal()">Close</button>
+    </div>
+</div>
+ 
 
     <script>
         function showComingSoon(feature) {
@@ -798,5 +813,34 @@
             });
         });
     </script>
+
+    <script>
+    function showWaitlistModal() {
+        document.getElementById('waitlistModal').classList.add('show');
+    }
+
+    function hideWaitlistModal() {
+        document.getElementById('waitlistModal').classList.remove('show');
+    }
+
+    function submitWaitlist(event) {
+        event.preventDefault(); // Prevent page reload
+
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+
+        if (name && email) {
+            console.log("User joined waitlist:", { name, email });
+
+            // Placeholder: Replace this with sending to your backend or Google Sheet
+            alert(`Thanks ${name}, you've been added to the waitlist!`);
+
+            // Hide modal and reset form
+            hideWaitlistModal();
+            document.getElementById('waitlistForm').reset();
+        }
+    }
+</script>
+
 </body>
 </html>

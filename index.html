@@ -790,7 +790,7 @@
         </div>
     </div>
 
-    <!-- Waitlist Modal - Now matches ComingSoon Modal design exactly -->
+    <!-- Waitlist Modal - Updated for Google Sheets -->
     <div id="waitlistModal" class="modal">
         <div class="modal-content">
             <div class="modal-icon">🚀</div>
@@ -830,18 +830,37 @@
             document.getElementById('waitlistModal').classList.remove('show');
         }
 
-        function submitWaitlist(event) {
+        // Updated submitWaitlist function for Google Sheets
+        async function submitWaitlist(event) {
             event.preventDefault();
+            
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            try {
+                // Your Google Apps Script URL
+                const response = await fetch('https://script.google.com/macros/s/AKfycbxP9ZMpSwJmppKnPtVUF5isBFCS7t-hqMbEC2Owrlbsb0UdR-JpjbQ3P04USeyXipb4/exec', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: formData.get('name'),
+                        email: formData.get('email')
+                    })
+                });
 
-            const name = document.getElementById('name').value.trim();
-            const email = document.getElementById('email').value.trim();
-
-            if (name && email) {
-                console.log("User joined waitlist:", { name, email });
-                alert(`Thanks ${name}, you've been added to the waitlist!`);
-
-                hideWaitlistModal();
-                document.getElementById('waitlistForm').reset();
+                if (response.ok) {
+                    const name = formData.get('name');
+                    alert(`Thanks ${name}, you've been added to the waitlist!`);
+                    hideWaitlistModal();
+                    form.reset();
+                } else {
+                    throw new Error('Network response was not ok');
+                }
+            } catch (error) {
+                alert('Sorry, there was an error. Please try again.');
+                console.error('Error:', error);
             }
         }
 

@@ -45,7 +45,7 @@
             letter-spacing: -0.04em;
         }
 
-        /* Custom button gradients */
+        /* Custom button gradients - matching index colors exactly */
         .btn-primary-custom {
             background: linear-gradient(135deg, #10b981, #059669);
         }
@@ -59,7 +59,7 @@
         }
 
         .btn-setup-custom {
-            background: linear-gradient(135deg, #3b82f6, #06b6d4);
+            background: linear-gradient(135deg, #10b981, #059669);
         }
 
         .turn-badge-custom {
@@ -121,59 +121,59 @@
         </div>
 
         <!-- Game Card -->
-        <div class="bg-white/3 backdrop-blur-md border border-white/10 rounded-3xl p-4 sm:p-6 lg:p-10 shadow-2xl">
+        <div class="bg-white/3 backdrop-blur-md rounded-3xl p-6 sm:p-8 lg:p-10">
             <!-- Game Setup -->
-            <div class="bg-white/5 backdrop-blur-md border border-white/10 p-4 sm:p-6 rounded-2xl mb-6 sm:mb-8">
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
-                    <div class="flex items-center gap-3 w-full sm:w-auto">
-                        <label class="text-base sm:text-lg font-semibold text-white" for="codeLength">
+            <div class="p-6 rounded-2xl mb-8">
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-6">
+                    <div class="flex items-center gap-4">
+                        <label class="text-lg font-semibold text-white" for="codeLength">
                             Code Length:
                         </label>
-                        <select id="codeLength" class="bg-white/10 border-2 border-white/20 hover:border-purple-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-100/30 rounded-xl px-4 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-semibold text-white cursor-pointer transition-all flex-1 sm:flex-none sm:min-w-32">
+                        <select id="codeLength" class="bg-white/10 hover:bg-white/15 rounded-xl px-5 py-3 text-base font-semibold text-white cursor-pointer transition-all min-w-32">
                             <option value="4" class="text-gray-800">4 digits</option>
                             <option value="5" class="text-gray-800">5 digits</option>
                             <option value="6" class="text-gray-800">6 digits</option>
                             <option value="7" class="text-gray-800">7 digits</option>
                         </select>
                     </div>
-                    <button onclick="newGame()" class="btn-setup-custom text-white font-bold px-6 sm:px-8 py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-sm sm:text-base">
+                    <button onclick="newGame()" class="btn-setup-custom text-white font-bold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
                         🎮 New Game
                     </button>
                 </div>
             </div>
 
             <!-- Input Section -->
-            <div class="bg-white/5 backdrop-blur-md border border-white/10 p-4 sm:p-6 lg:p-8 rounded-2xl text-white text-center mb-6 sm:mb-8">
-                <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">🚀 Make Your Guess</h2>
-                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
+            <div class="text-white text-center mb-8">
+                <h2 class="text-2xl font-bold mb-6">🚀 Make Your Guess</h2>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
                     <input type="text" id="guessInput" placeholder="Enter your guess" maxlength="7" 
-                           class="custom-input bg-white/95 border-2 border-white/30 rounded-xl px-4 sm:px-6 py-3 sm:py-4 text-lg sm:text-xl font-bold text-gray-800 text-center w-full sm:min-w-48 tracking-wider focus:bg-white transition-all">
+                           class="custom-input bg-white/95 rounded-xl px-6 py-4 text-xl font-bold text-gray-800 text-center min-w-48 tracking-wider focus:bg-white transition-all">
                     <button id="submitBtn" onclick="submitGuess()" 
-                            class="btn-primary-custom text-white font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-sm sm:text-base">
+                            class="btn-primary-custom text-white font-bold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300">
                         ⚡ Submit
                     </button>
                 </div>
-                <div id="feedback" class="text-base sm:text-xl font-semibold mt-4 sm:mt-6 p-3 sm:p-4 rounded-xl bg-white/20 border-2 border-white/30 min-h-12 sm:min-h-16 flex items-center justify-center">
+                <div id="feedback" class="text-xl font-semibold p-4 rounded-xl bg-white/10 min-h-16 flex items-center justify-center">
                     Select a code length and start a new game!
                 </div>
             </div>
 
             <!-- Game Progress and Strategy Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 <!-- Game Progress Section -->
-                <div class="bg-white/3 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-                    <h3 class="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-5">📊 Game Progress</h3>
-                    <div class="turn-badge-custom text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4 inline-block">
+                <div class="bg-white/3 backdrop-blur-md rounded-2xl p-6 hover:-translate-y-1 transition-all duration-300">
+                    <h3 class="text-xl font-bold text-white mb-5">📊 Game Progress</h3>
+                    <div class="turn-badge-custom text-white px-4 py-2 rounded-full text-sm font-semibold mb-4 inline-block">
                         Turn: <span id="turnCounter">0</span>
                     </div>
-                    <div class="overflow-hidden rounded-xl shadow-lg">
+                    <div class="overflow-hidden rounded-xl">
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[280px]">
                                 <thead>
                                     <tr class="table-header-custom text-white">
-                                        <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Turn</th>
-                                        <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Guess</th>
-                                        <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Correct</th>
+                                        <th class="py-4 px-3 font-semibold">Turn</th>
+                                        <th class="py-4 px-3 font-semibold">Guess</th>
+                                        <th class="py-4 px-3 font-semibold">Correct</th>
                                     </tr>
                                 </thead>
                                 <tbody id="historyBody" class="bg-white/5">
@@ -184,16 +184,10 @@
                 </div>
 
                 <!-- Interactive Strategy Grid -->
-                <div class="bg-white/3 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-                    <h3 class="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-5">🎯 Strategy Grid</h3>
-                    <p class="text-xs sm:text-sm text-white/80 mb-3 sm:mb-4">
-                        Click cells: <span class="inline-flex items-center gap-1 flex-wrap">
-                            <span class="text-red-300 font-bold text-xs sm:text-sm">✗ No</span>
-                            <span class="mx-1 text-white/60">→</span>
-                            <span class="text-green-300 font-bold text-xs sm:text-sm">✓ Yes</span>
-                            <span class="mx-1 text-white/60">→</span>
-                            <span class="text-white/60 text-xs sm:text-sm">Empty</span>
-                        </span>
+                <div class="bg-white/3 backdrop-blur-md rounded-2xl p-6 hover:-translate-y-1 transition-all duration-300">
+                    <h3 class="text-xl font-bold text-white mb-5">🎯 Strategy Grid</h3>
+                    <p class="text-sm text-white/80 mb-4">
+                        Click cells: <span class="text-red-300 font-bold">✗ No</span> → <span class="text-green-300 font-bold">✓ Yes</span> → Empty
                     </p>
                     <div class="overflow-x-auto">
                         <div id="eliminationGrid" class="inline-grid gap-px bg-white/10 rounded-xl overflow-hidden min-w-[240px]">
@@ -203,13 +197,13 @@
             </div>
 
             <!-- Win Message -->
-            <div id="winMessage" class="hidden btn-primary-custom text-white p-4 sm:p-6 lg:p-8 rounded-2xl text-center text-lg sm:text-xl lg:text-2xl font-bold mb-6 sm:mb-8">
+            <div id="winMessage" class="hidden btn-primary-custom text-white p-8 rounded-2xl text-center text-2xl font-bold mb-8">
                 🎉 VICTORY! You cracked the code! 🎉
             </div>
 
             <!-- Reset Button -->
             <div class="text-center">
-                <button onclick="confirmReset()" class="btn-reset-custom text-white font-bold px-6 sm:px-8 lg:px-10 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all text-sm sm:text-base">
+                <button onclick="confirmReset()" class="btn-reset-custom text-white font-bold px-10 py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all">
                     🔄 Reset Game
                 </button>
             </div>

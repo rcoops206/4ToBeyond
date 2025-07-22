@@ -1,387 +1,819 @@
-<!DOCTYPE html>
+.win-message {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exact Match - Logic Game</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'inter': ['Inter', 'sans-serif']
-                    },
-                    colors: {
-                        'glass-bg': 'rgba(255, 255, 255, 0.03)',
-                        'glass-border': 'rgba(255, 255, 255, 0.05)',
-                        'glass-border-strong': 'rgba(255, 255, 255, 0.1)',
-                        'soft-purple': '#a78bfa',
-                        'bright-cyan': '#06b6d4',
-                    },
-                    backgroundImage: {
-                        'gradient-accent': 'linear-gradient(135deg, #a78bfa, #06b6d4)',
-                        'gradient-title': 'linear-gradient(135deg, #ffffff 0%, #a78bfa 50%, #06b6d4 100%)',
-                        'gradient-cta': 'linear-gradient(135deg, rgba(167, 139, 250, 0.1), rgba(6, 182, 212, 0.1), rgba(16, 185, 129, 0.1))',
-                    }
-                }
-            }
-        }
-    </script>
+    <title>Exact Match</title>
     <style>
-        .gradient-title-text {
-            background: linear-gradient(135deg, #ffffff 0%, #a78bfa 50%, #06b6d4 100%);
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.15) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .container {
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.1);
+            padding-bottom: 20px;
+        }
+        
+        .title {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 0.2rem;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
             -webkit-background-clip: text;
-            background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(96, 165, 250, 0.3);
         }
         
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
+        .subtitle {
+            font-size: 14px;
+            color: #94a3b8;
+            font-weight: 400;
+        }
+        
+        .game-setup {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            flex-wrap: wrap;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+        }
+        
+        .setup-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+        
+        select {
+            padding: 10px 14px;
+            border: 2px solid rgba(148, 163, 184, 0.3);
+            border-radius: 12px;
+            font-size: 14px;
+            background: rgba(15, 23, 42, 0.8);
+            color: #e2e8f0;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+        }
+        
+        select option {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #64748b, #475569);
+            color: white;
+            box-shadow: 0 4px 16px rgba(100, 116, 139, 0.3);
+        }
+        
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #475569, #334155);
+            box-shadow: 0 8px 24px rgba(100, 116, 139, 0.4);
+        }
+        
+        .input-section {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+        }
+        
+        .guess-container {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .guess-input {
+            padding: 14px 18px;
+            border: 2px solid rgba(148, 163, 184, 0.3);
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 0.15rem;
+            width: 220px;
+            transition: all 0.3s;
+            background: rgba(15, 23, 42, 0.8);
+            color: #e2e8f0;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .guess-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 
+                0 0 0 3px rgba(96, 165, 250, 0.2),
+                0 4px 24px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .guess-input::placeholder {
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: 0.02rem;
+        }
+        
+        .feedback {
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            color: #e2e8f0;
+            transition: all 0.3s;
+        }
+        
+        .feedback.correct {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: rgba(34, 197, 94, 0.3);
+            color: #4ade80;
+            box-shadow: 0 0 24px rgba(34, 197, 94, 0.2);
+        }
+        
+        .game-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .progress-section {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .progress-section:hover {
+            transform: translateY(-4px);
+            box-shadow: 
+                0 16px 48px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .strategy-section {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .strategy-section:hover {
+            transform: translateY(-4px);
+            box-shadow: 
+                0 16px 48px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .section-header {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #e2e8f0;
+        }
+        
+        .turn-counter {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        }
+        
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .history-table th {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            padding: 16px 12px;
+            text-align: center;
+            font-weight: 600;
+            color: #e2e8f0;
+            border-bottom: 2px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .history-table td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            transition: background-color 0.2s;
+            color: #cbd5e1;
+            background: rgba(15, 23, 42, 0.5);
+        }
+        
+        .history-table tbody tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .strategy-grid {
+            display: grid;
+            gap: 2px;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            padding: 2px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .grid-header {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+        
+        .grid-row-header {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: #e2e8f0;
+            padding: 10px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+            border-right: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .grid-cell {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            padding: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #cbd5e1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .grid-cell::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        .grid-cell:hover::before {
+            left: 100%;
+        }
+        
+        .grid-cell:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            border-color: #60a5fa;
+        }
+        
+        .grid-cell.no {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+        
+        .grid-cell.yes {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+        }
+        
+        .grid-instructions {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+        
+        .grid-legend {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .legend-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .legend-no {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+        }
+        
+        .legend-yes {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
+        }
+        
+        .legend-empty {
+            background: rgba(30, 41, 59, 0.8);
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .win-message {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: white;
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            box-shadow: 
+                0 8px 32px rgba(34, 197, 94, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            animation: winPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes winPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        .win-message {
+            background: #e6f4ea;
+            border: 1px solid #6aaa64;
+            color: #1e7e34;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .reset-container {
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .game-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            
+            .guess-input {
+                width: 100%;
+                max-width: 280px;
+            }
+            
+            .guess-input::placeholder {
+                font-size: 12px;
             }
         }
         
-        .animate-slide-up {
-            animation: slideUp 0.6s ease-out;
+        @media (max-width: 600px) {
+            .game-setup {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .setup-group {
+                justify-content: space-between;
+            }
+            
+            .guess-container {
+                flex-direction: column;
+            }
+            
+            .guess-input {
+                width: 100%;
+                font-size: 18px;
+            }
+            
+            .guess-input::placeholder {
+                font-size: 11px;
+            }
+            
+            .strategy-grid {
+                font-size: 10px;
+            }
+            
+            .grid-cell {
+                min-height: 28px;
+                padding: 6px;
+            }
+        }
+        
+        @media (max-width: 400px) {
+            .guess-input::placeholder {
+                content: "Guess";
+            }
         }
     </style>
 </head>
-<body class="font-inter bg-[#0a0a0a] text-white min-h-screen p-3 sm:p-5">
-    <!-- Back to Home Button -->
-    <button onclick="window.location.href='index.html'" class="fixed top-3 left-3 sm:top-5 sm:left-5 z-50 bg-glass-bg hover:bg-white/5 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold transition-all duration-300 backdrop-blur-md border border-glass-border-strong hover:scale-105 shadow-lg text-sm sm:text-base hover:border-soft-purple/30">
-        ← Back to Home
-    </button>
-
-    <div class="max-w-6xl mx-auto pt-12 sm:pt-0">
+<body>
+    <div class="container">
         <!-- Header -->
-        <div class="text-center mb-6 sm:mb-10 animate-slide-up">
-            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black gradient-title-text mb-2 sm:mb-3 tracking-tight">
-                🎯 EXACT MATCH
-            </h1>
-            <p class="text-lg sm:text-xl text-white/70 font-medium">
-                Crack the code with perfect precision
-            </p>
+        <div class="header">
+            <h1 class="title">EXACT MATCH</h1>
+            <p class="subtitle">Crack the code with perfect precision</p>
         </div>
 
-        <!-- Game Card -->
-        <div class="bg-glass-bg border border-glass-border rounded-3xl p-4 sm:p-6 lg:p-10 shadow-2xl backdrop-blur-md">
-            <!-- Game Setup -->
-            <div class="bg-glass-bg p-4 sm:p-6 rounded-2xl mb-6 sm:mb-8 border border-glass-border">
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
-                    <div class="flex items-center gap-3 w-full sm:w-auto">
-                        <label class="text-base sm:text-lg font-semibold text-white" for="codeLength">
-                            Code Length:
-                        </label>
-                        <select id="codeLength" class="bg-white/5 border border-glass-border-strong rounded-xl px-4 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-semibold text-white cursor-pointer hover:border-soft-purple/30 focus:border-soft-purple focus:ring-4 focus:ring-soft-purple/10 transition-all flex-1 sm:flex-none sm:min-w-32">
-                            <option value="4" class="text-[#0a0a0a] bg-white">4 digits</option>
-                            <option value="5" class="text-[#0a0a0a] bg-white">5 digits</option>
-                            <option value="6" class="text-[#0a0a0a] bg-white">6 digits</option>
-                            <option value="7" class="text-[#0a0a0a] bg-white">7 digits</option>
-                        </select>
-                    </div>
-                    <button onclick="newGame()" class="bg-gradient-accent hover:opacity-90 text-white font-bold px-6 sm:px-8 py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-sm sm:text-base">
-                        🎮 New Game
-                    </button>
+        <!-- Game Setup -->
+        <div class="game-setup">
+            <div class="setup-group">
+                <label for="codeLength">Code Length:</label>
+                <select id="codeLength">
+                    <option value="4">4 digits</option>
+                    <option value="5">5 digits</option>
+                    <option value="6">6 digits</option>
+                    <option value="7">7 digits</option>
+                </select>
+            </div>
+            <button onclick="newGame()" class="btn btn-primary">New Game</button>
+        </div>
+
+        <!-- Input Section -->
+        <div class="input-section">
+            <div class="guess-container">
+                <input type="text" id="guessInput" placeholder="Enter your guess" maxlength="7" class="guess-input">
+                <button id="submitBtn" onclick="submitGuess()" class="btn btn-primary">Submit</button>
+            </div>
+            <div id="feedback" class="feedback">
+                Select a code length and start a new game!
+            </div>
+        </div>
+
+        <!-- Game Progress and Strategy Grid -->
+        <div class="game-grid">
+            <!-- Game Progress -->
+            <div class="progress-section">
+                <div class="section-header">
+                    <span>📊 Game Progress</span>
+                    <span class="turn-counter">Turn: <span id="turnCounter">0</span></span>
                 </div>
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Turn</th>
+                            <th>Guess</th>
+                            <th>Correct</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                    </tbody>
+                </table>
             </div>
 
-            <!-- Input Section -->
-            <div class="bg-gradient-cta p-4 sm:p-6 lg:p-8 rounded-2xl text-white text-center mb-6 sm:mb-8 border border-glass-border-strong backdrop-blur-sm">
-                <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">🚀 Make Your Guess</h2>
-                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
-                    <input type="text" id="guessInput" placeholder="Enter your guess" maxlength="7" 
-                           class="bg-white/95 border-2 border-white/20 rounded-xl px-4 sm:px-6 py-3 sm:py-4 text-lg sm:text-xl font-bold text-[#0a0a0a] text-center w-full sm:min-w-48 tracking-wider focus:bg-white focus:ring-4 focus:ring-soft-purple/30 focus:scale-105 transition-all">
-                    <button id="submitBtn" onclick="submitGuess()" 
-                            class="bg-gradient-to-r from-bright-cyan to-emerald-400 hover:from-bright-cyan/80 hover:to-emerald-400/80 text-white font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-sm sm:text-base">
-                        ⚡ Submit
-                    </button>
+            <!-- Strategy Grid -->
+            <div class="strategy-section">
+                <div class="section-header">
+                    <span>🎯 Strategy Grid</span>
                 </div>
-                <div id="feedback" class="text-base sm:text-xl font-semibold mt-4 sm:mt-6 p-3 sm:p-4 rounded-xl bg-white/5 border border-glass-border-strong min-h-12 sm:min-h-16 flex items-center justify-center">
-                    Select a code length and start a new game!
-                </div>
-            </div>
-
-            <!-- Game Progress and Strategy Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
-                <!-- Game Progress Section -->
-                <div class="bg-glass-bg rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-glass-border backdrop-blur-sm">
-                    <h3 class="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-5">📊 Game Progress</h3>
-                    <div class="bg-gradient-accent text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4 inline-block">
-                        Turn: <span id="turnCounter">0</span>
-                    </div>
-                    <div class="overflow-hidden rounded-xl shadow-lg bg-glass-bg border border-glass-border">
-                        <div class="overflow-x-auto">
-                            <table class="w-full min-w-[280px]">
-                                <thead>
-                                    <tr class="bg-gradient-accent text-white">
-                                        <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Turn</th>
-                                        <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Guess</th>
-                                        <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Correct</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="historyBody">
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Interactive Strategy Grid -->
-                <div class="bg-glass-bg rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-glass-border backdrop-blur-sm">
-                    <h3 class="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-5">🎯 Strategy Grid</h3>
-                    <p class="text-xs sm:text-sm text-white/70 mb-3 sm:mb-4">
-                        Click cells: <span class="inline-flex items-center gap-1 flex-wrap">
-                            <span class="text-red-300 font-bold text-xs sm:text-sm">✗ No</span>
-                            <span class="mx-1 text-white/40">→</span>
-                            <span class="text-green-300 font-bold text-xs sm:text-sm">✓ Yes</span>
-                            <span class="mx-1 text-white/40">→</span>
-                            <span class="text-white/40 text-xs sm:text-sm">Empty</span>
-                        </span>
-                    </p>
-                    <div class="overflow-x-auto">
-                        <div id="eliminationGrid" class="inline-grid gap-px bg-glass-border-strong rounded-xl overflow-hidden min-w-[240px]">
-                        </div>
+                <div class="grid-instructions">
+                    <div class="grid-legend">
+                        <span>Click cells:</span>
+                        <span class="legend-item legend-no">✗ No</span>
+                        <span>→</span>
+                        <span class="legend-item legend-yes">✓ Yes</span>
+                        <span>→</span>
+                        <span class="legend-item legend-empty">Empty</span>
                     </div>
                 </div>
+                <div id="eliminationGrid" class="strategy-grid">
+                </div>
             </div>
+        </div>
 
-            <!-- Win Message -->
-            <div id="winMessage" class="hidden bg-gradient-to-r from-emerald-500 to-bright-cyan text-white p-4 sm:p-6 lg:p-8 rounded-2xl text-center text-lg sm:text-xl lg:text-2xl font-bold mb-6 sm:mb-8">
-                🎉 VICTORY! You cracked the code! 🎉
-            </div>
+        <!-- Win Message -->
+        <div id="winMessage" class="win-message hidden">
+            🎉 VICTORY! You cracked the code! 🎉
+        </div>
 
-            <!-- Reset Button -->
-            <div class="text-center">
-                <button onclick="confirmReset()" class="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold px-6 sm:px-8 lg:px-10 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all text-sm sm:text-base">
-                    🔄 Reset Game
-                </button>
-            </div>
+        <!-- Reset Button -->
+        <div class="reset-container">
+            <button onclick="confirmReset()" class="btn btn-secondary">Reset Game</button>
         </div>
     </div>
 
     <script>
-        // Game state variables
+        // Game variables
         let secretCode = [];
-        let currentTurn = 0;
+        let turnCount = 0;
         let gameWon = false;
         let codeLength = 4;
         let eliminationState = {};
 
-        // Initialize the game
-        function initGame() {
-            updateCodeLength();
-            createEliminationGrid();
-            resetGame();
-        }
-
-        function updateCodeLength() {
-            codeLength = parseInt(document.getElementById('codeLength').value);
-            document.getElementById('guessInput').maxLength = codeLength;
-            createEliminationGrid();
-        }
-
-        function createEliminationGrid() {
+        // Initialize elimination grid
+        function initializeEliminationGrid() {
             const grid = document.getElementById('eliminationGrid');
             grid.innerHTML = '';
-            grid.style.gridTemplateColumns = `repeat(${codeLength + 1}, 1fr)`;
+            grid.style.gridTemplateColumns = `auto repeat(${codeLength}, 1fr)`;
             
-            // Reset elimination state
             eliminationState = {};
             
-            // Create header row
-            const positionHeader = document.createElement('div');
-            positionHeader.textContent = 'Pos\\Dig';
-            positionHeader.className = 'bg-gradient-accent text-white p-2 text-center font-bold text-xs sm:text-sm cursor-default';
-            grid.appendChild(positionHeader);
+            // Header row
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'grid-header';
+            grid.appendChild(emptyCell);
             
-            for (let digit = 0; digit <= 9; digit++) {
-                const digitHeader = document.createElement('div');
-                digitHeader.textContent = digit;
-                digitHeader.className = 'bg-gradient-accent text-white p-2 text-center font-bold text-xs sm:text-sm cursor-default';
-                grid.appendChild(digitHeader);
+            for (let pos = 0; pos < codeLength; pos++) {
+                const header = document.createElement('div');
+                header.className = 'grid-header';
+                header.textContent = `P${pos + 1}`;
+                grid.appendChild(header);
             }
             
-            // Create position rows
-            for (let pos = 1; pos <= codeLength; pos++) {
-                const posHeader = document.createElement('div');
-                posHeader.textContent = pos;
-                posHeader.className = 'bg-gradient-accent text-white p-2 text-center font-bold text-xs sm:text-sm cursor-default';
-                grid.appendChild(posHeader);
+            // Digit rows
+            for (let digit = 0; digit <= 9; digit++) {
+                const rowHeader = document.createElement('div');
+                rowHeader.className = 'grid-row-header';
+                rowHeader.textContent = digit.toString();
+                grid.appendChild(rowHeader);
                 
-                for (let digit = 0; digit <= 9; digit++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'bg-glass-bg border border-glass-border-strong p-2 text-center font-semibold cursor-pointer transition-all duration-200 hover:bg-white/5 hover:scale-105 min-h-[36px] flex items-center justify-center text-xs sm:text-sm';
-                    cell.dataset.position = pos - 1;
+                for (let pos = 0; pos < codeLength; pos++) {
+                    const cell = document.createElement('button');
+                    cell.className = 'grid-cell';
                     cell.dataset.digit = digit;
-                    cell.addEventListener('click', toggleEliminationCell);
-                    
-                    eliminationState[`${pos-1}-${digit}`] = 'unknown';
+                    cell.dataset.position = pos;
+                    cell.onclick = () => toggleCell(digit, pos);
                     grid.appendChild(cell);
+                    
+                    eliminationState[`${digit}-${pos}`] = 'unknown';
                 }
             }
         }
-
-        function toggleEliminationCell(event) {
-            const cell = event.target;
-            const key = `${cell.dataset.position}-${cell.dataset.digit}`;
-            const currentState = eliminationState[key];
+        
+        // Toggle elimination cell
+        function toggleCell(digit, position) {
+            const key = `${digit}-${position}`;
+            const cell = document.querySelector(`[data-digit="${digit}"][data-position="${position}"]`);
             
-            // Reset base classes
-            cell.className = 'border border-glass-border-strong p-2 text-center font-semibold cursor-pointer transition-all duration-200 hover:scale-105 min-h-[36px] flex items-center justify-center text-xs sm:text-sm';
-            
-            if (currentState === 'unknown') {
+            if (eliminationState[key] === 'unknown') {
                 eliminationState[key] = 'no';
-                cell.className += ' bg-red-500/10 text-red-300 border-red-500/30';
+                cell.className = 'grid-cell no';
                 cell.textContent = '✗';
-            } else if (currentState === 'no') {
+            } else if (eliminationState[key] === 'no') {
                 eliminationState[key] = 'yes';
-                cell.className += ' bg-green-500/10 text-green-300 border-green-500/30';
+                cell.className = 'grid-cell yes';
                 cell.textContent = '✓';
             } else {
                 eliminationState[key] = 'unknown';
-                cell.className += ' bg-glass-bg hover:bg-white/5';
+                cell.className = 'grid-cell';
                 cell.textContent = '';
             }
         }
 
+        // Initialize game
         function newGame() {
-            updateCodeLength();
+            codeLength = parseInt(document.getElementById('codeLength').value);
+            document.getElementById('guessInput').maxLength = codeLength;
+            
             secretCode = [];
             for (let i = 0; i < codeLength; i++) {
                 secretCode.push(Math.floor(Math.random() * 10));
             }
             
-            currentTurn = 0;
+            turnCount = 0;
             gameWon = false;
             
-            document.getElementById('turnCounter').textContent = currentTurn;
+            document.getElementById('turnCounter').textContent = turnCount;
             document.getElementById('historyBody').innerHTML = '';
             document.getElementById('feedback').textContent = `Game started! Guess the ${codeLength}-digit code.`;
+            document.getElementById('feedback').className = 'feedback';
             document.getElementById('winMessage').classList.add('hidden');
             document.getElementById('guessInput').value = '';
-            document.getElementById('guessInput').disabled = false;
-            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('guessInput').focus();
             
-            // Clear elimination grid
-            const gridCells = document.querySelectorAll('#eliminationGrid div[data-position]');
-            gridCells.forEach(cell => {
-                const key = `${cell.dataset.position}-${cell.dataset.digit}`;
-                if (eliminationState[key] !== undefined) {
-                    eliminationState[key] = 'unknown';
-                    cell.className = 'bg-glass-bg border border-glass-border-strong p-2 text-center font-semibold cursor-pointer transition-all duration-200 hover:bg-white/5 hover:scale-105 min-h-[36px] flex items-center justify-center text-xs sm:text-sm';
-                    cell.textContent = '';
-                }
-            });
+            initializeEliminationGrid();
+            
+            console.log('Secret code:', secretCode.join(''));
         }
 
+        // Submit guess
         function submitGuess() {
             if (gameWon) return;
             
-            const guess = document.getElementById('guessInput').value;
+            const guessInput = document.getElementById('guessInput');
+            const guess = guessInput.value.trim();
             
-            if (guess.length !== codeLength) {
+            if (guess.length !== codeLength || !/^\d+$/.test(guess)) {
                 document.getElementById('feedback').textContent = `Please enter exactly ${codeLength} digits.`;
                 return;
             }
             
-            if (!/^\d+$/.test(guess)) {
-                document.getElementById('feedback').textContent = 'Please enter only numbers.';
-                return;
-            }
+            turnCount++;
+            document.getElementById('turnCounter').textContent = turnCount;
             
-            currentTurn++;
             const guessArray = guess.split('').map(Number);
-            const correctCount = countCorrectDigits(guessArray);
+            let correctCount = 0;
             
-            // Add to history
-            addToHistory(currentTurn, guess, correctCount);
-            
-            // Update feedback
-            if (correctCount === codeLength) {
-                gameWon = true;
-                document.getElementById('feedback').textContent = '🎉 Perfect! You cracked the code!';
-                document.getElementById('winMessage').classList.remove('hidden');
-                document.getElementById('guessInput').disabled = true;
-                document.getElementById('submitBtn').disabled = true;
-            } else {
-                document.getElementById('feedback').textContent = `${correctCount} out of ${codeLength} digits are correct and in the right position.`;
-            }
-            
-            document.getElementById('turnCounter').textContent = currentTurn;
-            document.getElementById('guessInput').value = '';
-        }
-
-        function countCorrectDigits(guess) {
-            let correct = 0;
             for (let i = 0; i < codeLength; i++) {
-                if (guess[i] === secretCode[i]) {
-                    correct++;
+                if (guessArray[i] === secretCode[i]) {
+                    correctCount++;
                 }
             }
-            return correct;
+            
+            // Add to history
+            const historyBody = document.getElementById('historyBody');
+            const row = historyBody.insertRow();
+            row.insertCell(0).textContent = turnCount;
+            row.insertCell(1).textContent = guess;
+            row.insertCell(2).textContent = correctCount;
+            
+            // Update feedback
+            const feedbackEl = document.getElementById('feedback');
+            if (correctCount === codeLength) {
+                feedbackEl.textContent = `Perfect! All ${correctCount} digits correct!`;
+                feedbackEl.className = 'feedback correct';
+                document.getElementById('winMessage').classList.remove('hidden');
+                gameWon = true;
+            } else {
+                feedbackEl.textContent = `${correctCount} out of ${codeLength} digits correct.`;
+                feedbackEl.className = 'feedback';
+            }
+            
+            guessInput.value = '';
+            guessInput.focus();
         }
 
-        function addToHistory(turn, guess, correctCount) {
-            const tbody = document.getElementById('historyBody');
-            const row = document.createElement('tr');
-            row.className = 'bg-glass-bg border-t border-glass-border text-white/90 hover:bg-white/5 transition-colors';
-            
-            row.innerHTML = `
-                <td class="py-2 sm:py-3 px-2 sm:px-3 text-center text-xs sm:text-sm font-medium">${turn}</td>
-                <td class="py-2 sm:py-3 px-2 sm:px-3 text-center text-xs sm:text-sm font-mono font-bold tracking-wider">${guess}</td>
-                <td class="py-2 sm:py-3 px-2 sm:px-3 text-center text-xs sm:text-sm font-semibold ${correctCount === codeLength ? 'text-green-400' : 'text-white'}">${correctCount}</td>
-            `;
-            
-            tbody.appendChild(row);
-        }
-
+        // Reset game
         function confirmReset() {
-            if (confirm('Are you sure you want to reset the game? This will clear all progress.')) {
-                resetGame();
+            if (confirm('Are you sure you want to reset the game?')) {
+                newGame();
             }
         }
 
-        function resetGame() {
-            secretCode = [];
-            currentTurn = 0;
-            gameWon = false;
-            
-            document.getElementById('turnCounter').textContent = currentTurn;
-            document.getElementById('historyBody').innerHTML = '';
-            document.getElementById('feedback').textContent = 'Select a code length and start a new game!';
-            document.getElementById('winMessage').classList.add('hidden');
-            document.getElementById('guessInput').value = '';
-            document.getElementById('guessInput').disabled = false;
-            document.getElementById('submitBtn').disabled = false;
-            
-            createEliminationGrid();
-        }
-
-        // Event listeners
-        document.getElementById('codeLength').addEventListener('change', updateCodeLength);
-        
-        document.getElementById('guessInput').addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
+        // Enter key support
+        document.getElementById('guessInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
                 submitGuess();
             }
         });
 
-        document.getElementById('guessInput').addEventListener('input', function(event) {
-            // Only allow digits
-            event.target.value = event.target.value.replace(/[^0-9]/g, '');
-        });
-
-        // Initialize game when page loads
-        window.addEventListener('load', initGame);
+        // Start with a default game
+        newGame();
     </script>
 </body>
 </html>

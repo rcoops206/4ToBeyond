@@ -7,17 +7,112 @@
     <link href="frontend/dist/style.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* Custom animations and effects not available in Tailwind */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+            z-index: -1;
+            animation: drift 20s ease-in-out infinite;
+        }
+
+        @keyframes drift {
+            0%, 100% { 
+                transform: translate(0, 0);
+                filter: blur(60px);
+            }
+            50% { 
+                transform: translate(20px, -20px);
+                filter: blur(80px);
+            }
+        }
+
+        /* Custom gradient text effect */
+        .gradient-title {
+            background: linear-gradient(135deg, #ffffff 0%, #a78bfa 50%, #06b6d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.04em;
+        }
+
+        /* Custom button gradients */
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .btn-secondary-custom {
+            background: linear-gradient(135deg, #a78bfa, #06b6d4);
+        }
+
+        .btn-reset-custom {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .btn-setup-custom {
+            background: linear-gradient(135deg, #3b82f6, #06b6d4);
+        }
+
+        .turn-badge-custom {
+            background: linear-gradient(135deg, #a78bfa, #06b6d4);
+        }
+
+        .table-header-custom {
+            background: linear-gradient(135deg, #a78bfa, #06b6d4);
+        }
+
+        /* Custom grid cell states */
+        .grid-cell {
+            background: rgba(255, 255, 255, 0.05);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            min-height: 40px;
+        }
+
+        .grid-cell:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .grid-cell.no {
+            background: rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .grid-cell.yes {
+            background: rgba(34, 197, 94, 0.3);
+            color: #86efac;
+        }
+
+        /* Custom input focus effects */
+        .custom-input:focus {
+            transform: scale(1.02);
+            box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.1);
+        }
+    </style>
 </head>
-<body class="font-inter gradient-bg min-h-screen p-3 sm:p-5">
+<body class="font-inter min-h-screen p-3 sm:p-5 bg-black text-white">
     <!-- Back to Home Button -->
-    <button onclick="window.location.href='index.html'" class="fixed top-3 left-3 sm:top-5 sm:left-5 z-50 bg-white/20 hover:bg-white/30 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold transition-all duration-300 backdrop-blur-md border border-white/20 hover:scale-105 shadow-lg text-sm sm:text-base">
+    <button onclick="window.location.href='index.html'" class="fixed top-3 left-3 sm:top-5 sm:left-5 z-50 bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold transition-all duration-300 hover:scale-105 shadow-lg text-sm sm:text-base">
         ← Back to Home
     </button>
 
     <div class="max-w-6xl mx-auto pt-12 sm:pt-0">
         <!-- Header -->
-        <div class="text-center mb-6 sm:mb-10 animate-slide-up">
-            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white mb-2 sm:mb-3 tracking-tight">
+        <div class="text-center mb-6 sm:mb-10">
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black mb-2 sm:mb-3 tracking-tight gradient-title">
                 🎯 EXACT MATCH
             </h1>
             <p class="text-lg sm:text-xl text-white/80 font-medium">
@@ -26,35 +121,35 @@
         </div>
 
         <!-- Game Card -->
-        <div class="rounded-3xl p-4 sm:p-6 lg:p-10 shadow-2xl border border-white/10">
+        <div class="bg-white/3 backdrop-blur-md border border-white/10 rounded-3xl p-4 sm:p-6 lg:p-10 shadow-2xl">
             <!-- Game Setup -->
-            <div class="bg-gradient-to-r from-slate-50/10 to-slate-100/10 p-4 sm:p-6 rounded-2xl mb-6 sm:mb-8 border border-white/10">
+            <div class="bg-white/5 backdrop-blur-md border border-white/10 p-4 sm:p-6 rounded-2xl mb-6 sm:mb-8">
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
                     <div class="flex items-center gap-3 w-full sm:w-auto">
                         <label class="text-base sm:text-lg font-semibold text-white" for="codeLength">
                             Code Length:
                         </label>
-                        <select id="codeLength" class="bg-white/10 border-2 border-white/20 rounded-xl px-4 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-semibold text-white cursor-pointer hover:border-blue-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100/30 transition-all flex-1 sm:flex-none sm:min-w-32">
+                        <select id="codeLength" class="bg-white/10 border-2 border-white/20 hover:border-purple-400 focus:border-purple-500 focus:ring-4 focus:ring-purple-100/30 rounded-xl px-4 sm:px-5 py-2 sm:py-3 text-sm sm:text-base font-semibold text-white cursor-pointer transition-all flex-1 sm:flex-none sm:min-w-32">
                             <option value="4" class="text-gray-800">4 digits</option>
                             <option value="5" class="text-gray-800">5 digits</option>
                             <option value="6" class="text-gray-800">6 digits</option>
                             <option value="7" class="text-gray-800">7 digits</option>
                         </select>
                     </div>
-                    <button onclick="newGame()" class="bg-gradient-to-r from-blue-500 to-cyan-400 hover:from-blue-600 hover:to-cyan-500 text-white font-bold px-6 sm:px-8 py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-sm sm:text-base">
+                    <button onclick="newGame()" class="btn-setup-custom text-white font-bold px-6 sm:px-8 py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-sm sm:text-base">
                         🎮 New Game
                     </button>
                 </div>
             </div>
 
             <!-- Input Section -->
-            <div class="gradient-card p-4 sm:p-6 lg:p-8 rounded-2xl text-white text-center mb-6 sm:mb-8">
+            <div class="bg-white/5 backdrop-blur-md border border-white/10 p-4 sm:p-6 lg:p-8 rounded-2xl text-white text-center mb-6 sm:mb-8">
                 <h2 class="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">🚀 Make Your Guess</h2>
                 <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
                     <input type="text" id="guessInput" placeholder="Enter your guess" maxlength="7" 
-                           class="bg-white/95 border-2 border-white/30 rounded-xl px-4 sm:px-6 py-3 sm:py-4 text-lg sm:text-xl font-bold text-gray-800 text-center w-full sm:min-w-48 tracking-wider focus:bg-white focus:ring-4 focus:ring-white/30 focus:scale-105 transition-all">
+                           class="custom-input bg-white/95 border-2 border-white/30 rounded-xl px-4 sm:px-6 py-3 sm:py-4 text-lg sm:text-xl font-bold text-gray-800 text-center w-full sm:min-w-48 tracking-wider focus:bg-white transition-all">
                     <button id="submitBtn" onclick="submitGuess()" 
-                            class="bg-gradient-to-r from-green-500 to-emerald-400 hover:from-green-600 hover:to-emerald-500 text-white font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-sm sm:text-base">
+                            class="btn-primary-custom text-white font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 w-full sm:w-auto text-sm sm:text-base">
                         ⚡ Submit
                     </button>
                 </div>
@@ -66,22 +161,22 @@
             <!-- Game Progress and Strategy Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
                 <!-- Game Progress Section -->
-                <div class="rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-white/10">
+                <div class="bg-white/3 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
                     <h3 class="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-5">📊 Game Progress</h3>
-                    <div class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4 inline-block">
+                    <div class="turn-badge-custom text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold mb-3 sm:mb-4 inline-block">
                         Turn: <span id="turnCounter">0</span>
                     </div>
                     <div class="overflow-hidden rounded-xl shadow-lg">
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[280px]">
                                 <thead>
-                                    <tr class="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                                    <tr class="table-header-custom text-white">
                                         <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Turn</th>
                                         <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Guess</th>
                                         <th class="py-2 sm:py-4 px-2 sm:px-3 font-semibold text-xs sm:text-base">Correct</th>
                                     </tr>
                                 </thead>
-                                <tbody id="historyBody">
+                                <tbody id="historyBody" class="bg-white/5">
                                 </tbody>
                             </table>
                         </div>
@@ -89,7 +184,7 @@
                 </div>
 
                 <!-- Interactive Strategy Grid -->
-                <div class="rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-white/10">
+                <div class="bg-white/3 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-6 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
                     <h3 class="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-5">🎯 Strategy Grid</h3>
                     <p class="text-xs sm:text-sm text-white/80 mb-3 sm:mb-4">
                         Click cells: <span class="inline-flex items-center gap-1 flex-wrap">
@@ -108,13 +203,13 @@
             </div>
 
             <!-- Win Message -->
-            <div id="winMessage" class="hidden bg-gradient-to-r from-green-500 to-emerald-400 text-white p-4 sm:p-6 lg:p-8 rounded-2xl text-center text-lg sm:text-xl lg:text-2xl font-bold mb-6 sm:mb-8">
+            <div id="winMessage" class="hidden btn-primary-custom text-white p-4 sm:p-6 lg:p-8 rounded-2xl text-center text-lg sm:text-xl lg:text-2xl font-bold mb-6 sm:mb-8">
                 🎉 VICTORY! You cracked the code! 🎉
             </div>
 
             <!-- Reset Button -->
             <div class="text-center">
-                <button onclick="confirmReset()" class="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold px-6 sm:px-8 lg:px-10 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all text-sm sm:text-base">
+                <button onclick="confirmReset()" class="btn-reset-custom text-white font-bold px-6 sm:px-8 lg:px-10 py-3 sm:py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all text-sm sm:text-base">
                     🔄 Reset Game
                 </button>
             </div>
@@ -123,4 +218,4 @@
 
     <script src="frontend/src/script.js"></script>
 </body>
-</html>  
+</html>

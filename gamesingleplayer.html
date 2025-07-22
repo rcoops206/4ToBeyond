@@ -4,343 +4,128 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exact Match - Logic Game</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="frontend/dist/style.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0a0a0a;
-        }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-        }
-        .glass-button {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            transition: all 0.2s ease;
-        }
-        .glass-button:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-        .primary-button {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        .primary-button:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
-        .success-button {
-            background: rgba(34, 197, 94, 0.2);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-        }
-        .success-button:hover {
-            background: rgba(34, 197, 94, 0.3);
-        }
-        .danger-button {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-        .danger-button:hover {
-            background: rgba(239, 68, 68, 0.3);
-        }
-        .input-field {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-        }
-        .input-field:focus {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.3);
-            outline: none;
-        }
-        .strategy-cell {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.2s ease;
-        }
-        .strategy-cell:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-        .cell-no {
-            background: rgba(239, 68, 68, 0.2);
-            border-color: rgba(239, 68, 68, 0.3);
-        }
-        .cell-yes {
-            background: rgba(34, 197, 94, 0.2);
-            border-color: rgba(34, 197, 94, 0.3);
-        }
-    </style>
 </head>
-<body class="min-h-screen p-4">
-    <!-- Back Button -->
-    <button onclick="window.location.href='index.html'" 
-            class="fixed top-4 left-4 z-50 glass-button text-white px-4 py-2 rounded-lg font-medium text-sm hover:scale-105 transition-all duration-200">
-        ← Back
+<body class="bg-[#0a0a0a] text-white font-inter min-h-screen p-3 sm:p-5">
+    <!-- Back to Home Button -->
+    <button onclick="window.location.href='index.html'"
+        class="fixed top-3 left-3 sm:top-5 sm:left-5 z-50 bg-white/5 hover:bg-white/10 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-medium transition-all duration-300 backdrop-blur border border-white/10 hover:scale-105 text-sm sm:text-base">
+        ← Home
     </button>
 
-    <div class="max-w-4xl mx-auto pt-16">
+    <div class="max-w-6xl mx-auto pt-12 sm:pt-0">
         <!-- Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-4xl md:text-5xl font-black text-white mb-2 tracking-tight">
-                EXACT MATCH
+        <div class="text-center mb-10 animate-slide-up">
+            <h1 class="text-5xl font-black bg-clip-text text-transparent"
+                style="background-image: linear-gradient(135deg, #ffffff 0%, #a78bfa 50%, #06b6d4 100%)">
+                🎯 EXACT MATCH
             </h1>
-            <p class="text-lg text-white/70 font-medium">
+            <p class="text-lg text-[rgba(255,255,255,0.7)] font-medium">
                 Crack the code with perfect precision
             </p>
         </div>
 
-        <!-- Main Game Container -->
-        <div class="glass-card rounded-2xl p-6 md:p-8">
+        <!-- Game Card -->
+        <div class="rounded-3xl p-6 lg:p-10 border border-white/10 bg-[rgba(255,255,255,0.03)] backdrop-blur">
             <!-- Game Setup -->
-            <div class="glass-card p-4 md:p-6 rounded-xl mb-6">
-                <div class="flex flex-col md:flex-row items-center justify-center gap-4">
-                    <div class="flex items-center gap-3">
-                        <label class="text-base font-semibold text-white" for="codeLength">
-                            Code Length:
-                        </label>
-                        <select id="codeLength" class="input-field rounded-lg px-4 py-2 font-medium cursor-pointer min-w-32">
-                            <option value="4" class="bg-gray-800">4 digits</option>
-                            <option value="5" class="bg-gray-800">5 digits</option>
-                            <option value="6" class="bg-gray-800">6 digits</option>
-                            <option value="7" class="bg-gray-800">7 digits</option>
+            <div class="p-6 rounded-2xl mb-8 border border-white/10 bg-[rgba(255,255,255,0.03)]">
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-8">
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <label for="codeLength" class="text-lg font-semibold text-white">Code Length:</label>
+                        <select id="codeLength"
+                            class="bg-white/5 border border-white/10 rounded-xl px-5 py-3 text-base font-semibold text-white cursor-pointer focus:ring-2 focus:ring-cyan-400/20">
+                            <option value="4" class="text-black">4 digits</option>
+                            <option value="5" class="text-black">5 digits</option>
+                            <option value="6" class="text-black">6 digits</option>
+                            <option value="7" class="text-black">7 digits</option>
                         </select>
                     </div>
-                    <button onclick="newGame()" class="primary-button text-white font-semibold px-6 py-2 rounded-lg hover:scale-105 transition-all duration-200">
-                        New Game
+                    <button onclick="newGame()"
+                        class="bg-[linear-gradient(135deg,#a78bfa,#06b6d4)] hover:opacity-90 text-white font-bold px-8 py-3 rounded-xl transition-all w-full sm:w-auto text-base">
+                        🎮 New Game
                     </button>
                 </div>
             </div>
 
             <!-- Input Section -->
-            <div class="glass-card p-6 rounded-xl text-white text-center mb-6">
-                <h2 class="text-xl font-bold mb-4">Make Your Guess</h2>
-                <div class="flex flex-col md:flex-row gap-3 justify-center items-center">
-                    <input type="text" id="guessInput" placeholder="Enter your guess" maxlength="7" 
-                           class="input-field rounded-lg px-4 py-3 text-lg font-bold text-center w-full md:min-w-48 tracking-wider backdrop-blur-sm">
-                    <button id="submitBtn" onclick="submitGuess()" 
-                            class="success-button text-white font-semibold px-6 py-3 rounded-lg hover:scale-105 transition-all duration-200 w-full md:w-auto">
-                        Submit
+            <div class="p-6 rounded-2xl text-white text-center mb-8 bg-[rgba(255,255,255,0.03)] border border-white/10">
+                <h2 class="text-2xl font-bold mb-6">🚀 Make Your Guess</h2>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <input type="text" id="guessInput" placeholder="Enter your guess" maxlength="7"
+                        class="bg-white text-black border border-white/20 rounded-xl px-6 py-4 text-xl font-bold text-center tracking-wider focus:outline-none focus:ring-2 focus:ring-cyan-400/20">
+                    <button id="submitBtn" onclick="submitGuess()"
+                        class="bg-[linear-gradient(135deg,#06b6d4,#10b981)] hover:opacity-90 text-white font-bold px-8 py-4 rounded-xl transition-all text-base">
+                        ⚡ Submit
                     </button>
                 </div>
-                <div id="feedback" class="text-base font-medium mt-4 p-4 rounded-lg glass-card min-h-12 flex items-center justify-center">
-                    Select a code length and start a new game
+                <div id="feedback"
+                    class="text-xl font-semibold mt-6 p-4 rounded-xl bg-[rgba(255,255,255,0.03)] border border-white/10 min-h-16 flex items-center justify-center text-[rgba(255,255,255,0.7)]">
+                    Select a code length and start a new game!
                 </div>
             </div>
 
             <!-- Game Progress and Strategy Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <!-- Game Progress -->
-                <div class="glass-card rounded-xl p-6">
-                    <h3 class="text-lg font-bold text-white mb-4">Game Progress</h3>
-                    <div class="glass-card text-white px-3 py-1 rounded-full text-sm font-medium mb-4 inline-block">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Game Progress Section -->
+                <div class="rounded-2xl p-6 border border-white/10 bg-[rgba(255,255,255,0.03)]">
+                    <h3 class="text-xl font-bold text-white mb-5">📊 Game Progress</h3>
+                    <div class="bg-[linear-gradient(135deg,#a78bfa,#06b6d4)] text-white px-4 py-2 rounded-full text-sm font-semibold mb-4 inline-block">
                         Turn: <span id="turnCounter">0</span>
                     </div>
-                    <div class="glass-card rounded-lg overflow-hidden">
-                        <table class="w-full">
-                            <thead>
-                                <tr class="border-b border-white/10">
-                                    <th class="py-3 px-3 font-semibold text-white/90 text-sm">Turn</th>
-                                    <th class="py-3 px-3 font-semibold text-white/90 text-sm">Guess</th>
-                                    <th class="py-3 px-3 font-semibold text-white/90 text-sm">Correct</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyBody">
-                            </tbody>
-                        </table>
+                    <div class="overflow-hidden rounded-xl">
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[280px]">
+                                <thead>
+                                    <tr class="bg-[linear-gradient(135deg,#a78bfa,#06b6d4)] text-white">
+                                        <th class="py-4 px-3 font-semibold text-sm">Turn</th>
+                                        <th class="py-4 px-3 font-semibold text-sm">Guess</th>
+                                        <th class="py-4 px-3 font-semibold text-sm">Correct</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Strategy Grid -->
-                <div class="glass-card rounded-xl p-6">
-                    <h3 class="text-lg font-bold text-white mb-4">Strategy Grid</h3>
-                    <p class="text-sm text-white/70 mb-4">
-                        Click cells: 
-                        <span class="text-red-400 font-medium">✗ No</span> → 
-                        <span class="text-green-400 font-medium">✓ Yes</span> → 
-                        <span class="text-white/50">Empty</span>
+                <div class="rounded-2xl p-6 border border-white/10 bg-[rgba(255,255,255,0.03)]">
+                    <h3 class="text-xl font-bold text-white mb-5">🎯 Strategy Grid</h3>
+                    <p class="text-sm text-[rgba(255,255,255,0.7)] mb-4">
+                        Click cells:
+                        <span class="inline-flex items-center gap-1 flex-wrap">
+                            <span class="text-red-300 font-bold text-sm">✗ No</span>
+                            <span class="mx-1 text-white/60">→</span>
+                            <span class="text-green-300 font-bold text-sm">✓ Yes</span>
+                            <span class="mx-1 text-white/60">→</span>
+                            <span class="text-white/60 text-sm">Empty</span>
+                        </span>
                     </p>
                     <div class="overflow-x-auto">
-                        <div id="eliminationGrid" class="inline-grid gap-px rounded-lg overflow-hidden min-w-60">
+                        <div id="eliminationGrid" class="inline-grid gap-px bg-white/10 rounded-xl overflow-hidden min-w-[240px]">
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Win Message -->
-            <div id="winMessage" class="hidden glass-card text-white p-6 rounded-xl text-center text-xl font-bold mb-6 border-green-500/30 bg-green-500/10">
+            <div id="winMessage"
+                class="hidden bg-[linear-gradient(135deg,#10b981,#06b6d4)] text-white p-6 rounded-2xl text-center text-2xl font-bold mb-8">
                 🎉 VICTORY! You cracked the code! 🎉
             </div>
 
             <!-- Reset Button -->
             <div class="text-center">
-                <button onclick="confirmReset()" class="danger-button text-white font-semibold px-8 py-3 rounded-lg hover:scale-105 transition-all duration-200">
-                    Reset Game
+                <button onclick="confirmReset()"
+                    class="bg-[linear-gradient(135deg,rgba(167,139,250,0.1),rgba(6,182,212,0.1),rgba(16,185,129,0.1))] hover:bg-white/10 text-white font-bold px-10 py-4 rounded-xl border border-white/10 transition-all text-base">
+                    🔄 Reset Game
                 </button>
             </div>
         </div>
     </div>
 
-    <script>
-        let secretCode = '';
-        let currentTurn = 0;
-        let gameActive = false;
-        let codeLength = 4;
-
-        function newGame() {
-            codeLength = parseInt(document.getElementById('codeLength').value);
-            secretCode = generateSecretCode(codeLength);
-            currentTurn = 0;
-            gameActive = true;
-            
-            document.getElementById('turnCounter').textContent = '0';
-            document.getElementById('historyBody').innerHTML = '';
-            document.getElementById('feedback').textContent = 'Game started! Enter your first guess.';
-            document.getElementById('winMessage').classList.add('hidden');
-            document.getElementById('guessInput').value = '';
-            document.getElementById('guessInput').maxLength = codeLength;
-            
-            generateEliminationGrid();
-        }
-
-        function generateSecretCode(length) {
-            let code = '';
-            for (let i = 0; i < length; i++) {
-                code += Math.floor(Math.random() * 10).toString();
-            }
-            console.log('Secret code:', code); // For testing
-            return code;
-        }
-
-        function submitGuess() {
-            if (!gameActive) {
-                document.getElementById('feedback').textContent = 'Please start a new game first!';
-                return;
-            }
-
-            const guess = document.getElementById('guessInput').value.trim();
-            
-            if (guess.length !== codeLength) {
-                document.getElementById('feedback').textContent = `Please enter exactly ${codeLength} digits.`;
-                return;
-            }
-            
-            if (!/^\d+$/.test(guess)) {
-                document.getElementById('feedback').textContent = 'Please enter only numbers.';
-                return;
-            }
-
-            currentTurn++;
-            const correctPositions = checkGuess(guess, secretCode);
-            
-            addToHistory(currentTurn, guess, correctPositions);
-            document.getElementById('turnCounter').textContent = currentTurn;
-            
-            if (correctPositions === codeLength) {
-                document.getElementById('feedback').textContent = `Congratulations! You won in ${currentTurn} turns!`;
-                document.getElementById('winMessage').classList.remove('hidden');
-                gameActive = false;
-            } else {
-                document.getElementById('feedback').textContent = `${correctPositions} digits in correct positions. Try again!`;
-            }
-            
-            document.getElementById('guessInput').value = '';
-        }
-
-        function checkGuess(guess, secret) {
-            let correct = 0;
-            for (let i = 0; i < guess.length; i++) {
-                if (guess[i] === secret[i]) {
-                    correct++;
-                }
-            }
-            return correct;
-        }
-
-        function addToHistory(turn, guess, correct) {
-            const tbody = document.getElementById('historyBody');
-            const row = tbody.insertRow();
-            row.className = 'border-b border-white/5';
-            
-            row.insertCell(0).innerHTML = `<span class="text-white/90 font-medium">${turn}</span>`;
-            row.insertCell(1).innerHTML = `<span class="text-white font-mono font-bold tracking-wider">${guess}</span>`;
-            row.insertCell(2).innerHTML = `<span class="text-white font-bold">${correct}</span>`;
-            
-            row.cells[0].className = 'py-2 px-3 text-center';
-            row.cells[1].className = 'py-2 px-3 text-center';
-            row.cells[2].className = 'py-2 px-3 text-center';
-        }
-
-        function generateEliminationGrid() {
-            const grid = document.getElementById('eliminationGrid');
-            grid.innerHTML = '';
-            grid.style.gridTemplateColumns = `repeat(${codeLength + 1}, 1fr)`;
-            
-            // Header row
-            const headerCell = document.createElement('div');
-            headerCell.className = 'strategy-cell p-2 text-center font-semibold text-white/70 text-sm';
-            headerCell.textContent = 'Pos\\Digit';
-            grid.appendChild(headerCell);
-            
-            for (let digit = 0; digit <= 9; digit++) {
-                const digitHeader = document.createElement('div');
-                digitHeader.className = 'strategy-cell p-2 text-center font-bold text-white text-sm';
-                digitHeader.textContent = digit;
-                grid.appendChild(digitHeader);
-            }
-            
-            // Grid rows
-            for (let pos = 1; pos <= codeLength; pos++) {
-                const posHeader = document.createElement('div');
-                posHeader.className = 'strategy-cell p-2 text-center font-bold text-white text-sm';
-                posHeader.textContent = pos;
-                grid.appendChild(posHeader);
-                
-                for (let digit = 0; digit <= 9; digit++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'strategy-cell p-2 text-center cursor-pointer text-sm font-medium';
-                    cell.dataset.pos = pos;
-                    cell.dataset.digit = digit;
-                    cell.textContent = '?';
-                    cell.onclick = () => toggleCell(cell);
-                    grid.appendChild(cell);
-                }
-            }
-        }
-
-        function toggleCell(cell) {
-            if (cell.textContent === '?') {
-                cell.textContent = '✗';
-                cell.className = cell.className.replace('strategy-cell', 'strategy-cell cell-no');
-            } else if (cell.textContent === '✗') {
-                cell.textContent = '✓';
-                cell.className = cell.className.replace('cell-no', 'cell-yes');
-            } else {
-                cell.textContent = '?';
-                cell.className = cell.className.replace('cell-yes', '');
-            }
-        }
-
-        function confirmReset() {
-            if (confirm('Are you sure you want to reset the game?')) {
-                location.reload();
-            }
-        }
-
-        // Enter key support
-        document.getElementById('guessInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                submitGuess();
-            }
-        });
-
-        // Initialize empty grid on page load
-        generateEliminationGrid();
-    </script>
+    <script src="frontend/src/script.js"></script>
 </body>
 </html>

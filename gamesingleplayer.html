@@ -4,11 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exact Match</title>
-
-    <button onclick="window.location.href='index.html'" class="fixed top-3 left-3 sm:top-5 sm:left-5 z-50 bg-white/20 hover:bg-white/30 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-xl font-semibold transition-all duration-300 backdrop-blur-md border border-white/20 hover:scale-105 shadow-lg text-sm sm:text-base">
-        ← Back to Home
-    </button>
-
     <style>
         * {
             box-sizing: border-box;
@@ -66,6 +61,15 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
             text-shadow: 0 0 30px rgba(96, 165, 250, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .title:hover {
+            transform: scale(1.05);
+            filter: brightness(1.2);
         }
         
         .subtitle {
@@ -579,7 +583,7 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1 class="title">EXACT MATCH</h1>
+            <h1 class="title" onclick="window.location.href='index.html'">EXACT MATCH</h1>
             <p class="subtitle">Crack the code with perfect precision</p>
         </div>
 

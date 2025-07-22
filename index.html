@@ -790,7 +790,7 @@
         </div>
     </div>
 
-    <!-- Waitlist Modal - Updated for Google Sheets -->
+    <!-- Waitlist Modal - Enhanced with debugging -->
     <div id="waitlistModal" class="modal">
         <div class="modal-content">
             <div class="modal-icon">🚀</div>
@@ -830,37 +830,67 @@
             document.getElementById('waitlistModal').classList.remove('show');
         }
 
-        // Updated submitWaitlist function for Google Sheets
+        // Enhanced debug version of submitWaitlist function
         async function submitWaitlist(event) {
+            console.log('🚀 Form submission started');
             event.preventDefault();
             
             const form = event.target;
             const formData = new FormData(form);
             
+            const name = formData.get('name');
+            const email = formData.get('email');
+            
+            console.log('📊 Form data:', { name, email });
+            
+            const requestData = {
+                name: name,
+                email: email
+            };
+            
+            console.log('📤 Sending data:', requestData);
+            console.log('🔗 URL:', 'https://script.google.com/macros/s/AKfycbxP9ZMpSwJmppKnPtVUF5isBFCS7t-hqMbEC2Owrlbsb0UdR-JpjbQ3P04USeyXipb4/exec');
+            
             try {
-                // Your Google Apps Script URL
+                console.log('⏳ Making fetch request...');
+                
                 const response = await fetch('https://script.google.com/macros/s/AKfycbxP9ZMpSwJmppKnPtVUF5isBFCS7t-hqMbEC2Owrlbsb0UdR-JpjbQ3P04USeyXipb4/exec', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        name: formData.get('name'),
-                        email: formData.get('email')
-                    })
+                    body: JSON.stringify(requestData)
+                });
+
+                console.log('📥 Response received:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok,
+                    url: response.url
                 });
 
                 if (response.ok) {
-                    const name = formData.get('name');
+                    const responseData = await response.json();
+                    console.log('✅ Response data:', responseData);
+                    
                     alert(`Thanks ${name}, you've been added to the waitlist!`);
                     hideWaitlistModal();
                     form.reset();
                 } else {
-                    throw new Error('Network response was not ok');
+                    console.error('❌ Response not OK:', response.status, response.statusText);
+                    const errorText = await response.text();
+                    console.error('❌ Error response body:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
             } catch (error) {
-                alert('Sorry, there was an error. Please try again.');
-                console.error('Error:', error);
+                console.error('💥 Catch block error:', error);
+                console.error('💥 Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                });
+                
+                alert('Sorry, there was an error. Please try again. Check console for details.');
             }
         }
 

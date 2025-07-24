@@ -48,35 +48,192 @@
             z-index: -1;
         }
 
-        /* User Navigation - Simplified */
+        /* User Navigation with Profile System */
         .user-nav {
             position: fixed;
             top: 1rem;
             right: 1rem;
             z-index: 1000;
+        }
+
+        .profile-container {
+            position: relative;
+        }
+
+        .profile-icon {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-
-        .nav-button {
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            justify-content: center;
             color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-size: 0.9rem;
+            font-size: 1.3rem;
             cursor: pointer;
             transition: all 0.3s ease;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
         }
 
-        .nav-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        .profile-icon:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+            border-color: rgba(255, 255, 255, 0.3);
         }
 
-        .nav-button.secondary {
-            background: linear-gradient(135deg, #6b7280, #4b5563);
+        .profile-dropdown {
+            position: absolute;
+            top: 55px;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 1rem;
+            min-width: 180px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .profile-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .profile-dropdown::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            right: 18px;
+            width: 16px;
+            height: 16px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: none;
+            border-right: none;
+            transform: rotate(45deg);
+            backdrop-filter: blur(20px);
+        }
+
+        .profile-header {
+            text-align: center;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 0.8rem;
+        }
+
+        .profile-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #a78bfa, #06b6d4);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin: 0 auto 0.4rem;
+            box-shadow: 0 4px 15px rgba(167, 139, 250, 0.4);
+        }
+
+        .profile-name {
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .profile-email {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.75rem;
+        }
+
+        .profile-menu {
+            list-style: none;
+        }
+
+        .profile-menu-item {
+            margin-bottom: 0.4rem;
+        }
+
+        .profile-menu-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .profile-menu-link {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.6rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .profile-menu-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transform: translateX(3px);
+        }
+
+        .profile-menu-link.danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .profile-menu-link.primary:hover {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+
+        .profile-menu-icon {
+            font-size: 1rem;
+            width: 18px;
+            text-align: center;
+        }
+
+        /* Loading state for sign out */
+        .profile-menu-link.loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Guest indicator styling */
+        .guest-indicator {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            font-size: 0.6rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 6px;
+            margin-top: 0.3rem;
+            display: inline-block;
         }
 
         /* Save Result Modal */
@@ -667,6 +824,24 @@
     </style>
 </head>
 <body>
+    <!-- User Navigation with Enhanced Profile System -->
+    <div class="user-nav">
+        <div class="profile-container">
+            <div class="profile-icon" onclick="toggleProfileDropdown()">
+                👤
+            </div>
+            <div class="profile-dropdown" id="profileDropdown">
+                <div class="profile-header">
+                    <div class="profile-avatar">👤</div>
+                    <div class="profile-name" id="profileName">Loading...</div>
+                    <div class="profile-email" id="profileEmail">Please wait...</div>
+                </div>
+                <ul class="profile-menu" id="profileMenu">
+                    <!-- Menu items will be dynamically generated -->
+                </ul>
+            </div>
+        </div>
+    </div>
     
     <!-- Save Result Modal -->
     <div id="saveModal" class="save-modal">
@@ -685,7 +860,7 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1 class="title" onclick="window.location.href='index.html'">LYTIC</h1>
+            <h1 class="title" onclick="window.location.href='hub.html'">LYTIC</h1>
             <p class="subtitle">Crack the code with perfect precision</p>
         </div>
 
@@ -772,8 +947,10 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNid3RleHNid3pmbG1nYnd6dnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjU1MTUsImV4cCI6MjA2ODk0MTUxNX0.p4I1mFfNS6b23vYrmjFwSyqZ8_QEcwD_k1paY3iZbm0'
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
 
-        // Global user state
+        // Global state
         let currentUser = null;
+        let isSigningOut = false;
+        let isGuestMode = false;
 
         // Game variables
         let secretCode = [];
@@ -785,27 +962,220 @@
         let gameEndTime = null;
         let currentGameResult = null;
 
-        // Check if user is logged in on page load
+        // Initialize user data on page load
         window.addEventListener('load', async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                currentUser = user;
-                document.getElementById('signOutBtn').style.display = 'block';
-            }
+            await loadUserData();
         });
 
-        // UI functions - Simplified
-        async function signOut() {
+        // Load and display user data
+        async function loadUserData() {
             try {
-                const { error } = await supabase.auth.signOut();
-                if (error) throw error;
+                // Check if user came as guest from URL parameter or session
+                const urlParams = new URLSearchParams(window.location.search);
+                const guestParam = urlParams.get('guest');
                 
-                currentUser = null;
-                document.getElementById('signOutBtn').style.display = 'none';
-                alert('Signed out successfully');
+                if (guestParam === 'true') {
+                    // User explicitly chose guest mode
+                    isGuestMode = true;
+                    currentUser = null;
+                    updateProfileDisplay(null, true);
+                    return;
+                }
+
+                const { data: { user }, error } = await supabase.auth.getUser();
+                
+                if (error) {
+                    console.error('Error getting user:', error);
+                    // Fallback to guest mode on error
+                    isGuestMode = true;
+                    updateProfileDisplay(null, true);
+                    return;
+                }
+
+                if (user) {
+                    isGuestMode = false;
+                    currentUser = user;
+                    updateProfileDisplay(user, false);
+                } else {
+                    // No user found, assume guest mode
+                    isGuestMode = true;
+                    updateProfileDisplay(null, true);
+                }
             } catch (error) {
-                alert('Error signing out: ' + error.message);
+                console.error('Failed to load user data:', error);
+                isGuestMode = true;
+                updateProfileDisplay(null, true);
             }
+        }
+
+        // Update profile display with user information
+        function updateProfileDisplay(user, isGuestMode = false) {
+            const nameElement = document.getElementById('profileName');
+            const emailElement = document.getElementById('profileEmail');
+            const profileMenu = document.getElementById('profileMenu');
+
+            if (user && !isGuestMode) {
+                // Authenticated user
+                const displayName = user.user_metadata?.display_name || 
+                                 user.user_metadata?.full_name || 
+                                 user.email?.split('@')[0] || 
+                                 'User';
+                nameElement.textContent = displayName;
+                emailElement.textContent = user.email || 'No email';
+                
+                // Show full menu for authenticated users
+                profileMenu.innerHTML = `
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="goToHub()">
+                            <span class="profile-menu-icon">🏠</span>
+                            <span>Hub</span>
+                        </button>
+                    </li>
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="showDashboard()">
+                            <span class="profile-menu-icon">📊</span>
+                            <span>Dashboard</span>
+                        </button>
+                    </li>
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="showSettings()">
+                            <span class="profile-menu-icon">⚙️</span>
+                            <span>Settings</span>
+                        </button>
+                    </li>
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link danger" id="signOutButton" onclick="signOut()">
+                            <span class="profile-menu-icon">🚪</span>
+                            <span>Sign Out</span>
+                        </button>
+                    </li>
+                `;
+            } else {
+                // Guest user
+                nameElement.textContent = 'Guest User';
+                emailElement.innerHTML = `
+                    Playing as Guest
+                    <div class="guest-indicator">GUEST MODE</div>
+                `;
+                
+                // Show limited menu for guest users
+                profileMenu.innerHTML = `
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="goToHub()">
+                            <span class="profile-menu-icon">🏠</span>
+                            <span>Hub</span>
+                        </button>
+                    </li>
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link primary" onclick="signInAsUser()">
+                            <span class="profile-menu-icon">🔑</span>
+                            <span>Sign In</span>
+                        </button>
+                    </li>
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="createAccount()">
+                            <span class="profile-menu-icon">✨</span>
+                            <span>Create Account</span>
+                        </button>
+                    </li>
+                `;
+            }
+        }
+
+        // Enhanced Profile Functions
+        function toggleProfileDropdown() {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        function goToHub() {
+            if (isGuestMode) {
+                window.location.href = 'hub.html?guest=true';
+            } else {
+                window.location.href = 'hub.html';
+            }
+        }
+
+        function showDashboard() {
+            if (isGuestMode) {
+                alert('Sign in to access your profile dashboard and track your progress!');
+            } else {
+                alert('Profile Dashboard coming soon! Here you\'ll see your stats, achievements, and game history.');
+            }
+            toggleProfileDropdown();
+        }
+
+        function showSettings() {
+            if (isGuestMode) {
+                alert('Sign in to access settings and customize your experience!');
+            } else {
+                alert('Settings coming soon! Here you\'ll customize your game preferences and account settings.');
+            }
+            toggleProfileDropdown();
+        }
+
+        // Enhanced Sign Out Function with Proper Session Management
+        async function signOut() {
+            if (isSigningOut) return; // Prevent multiple sign out attempts
+            
+            if (!confirm('Are you sure you want to sign out?')) {
+                toggleProfileDropdown();
+                return;
+            }
+
+            isSigningOut = true;
+            const signOutButton = document.getElementById('signOutButton');
+            
+            // Show loading state
+            if (signOutButton) {
+                signOutButton.classList.add('loading');
+                signOutButton.innerHTML = `
+                    <div class="loading-spinner"></div>
+                    <span>Signing out...</span>
+                `;
+            }
+
+            try {
+                // Clear Supabase session properly
+                const { error } = await supabase.auth.signOut({
+                    scope: 'global' // Sign out from all sessions
+                });
+
+                if (error) {
+                    console.error('Supabase sign out error:', error);
+                }
+
+                // Clear all local storage and session storage
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Clear any cookies (optional, for extra security)
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+
+                // Force page reload and redirect to ensure clean state
+                window.location.replace('index.html');
+                
+            } catch (error) {
+                console.error('Error during sign out:', error);
+                
+                // Even if there's an error, still redirect to login
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.replace('index.html');
+            } finally {
+                isSigningOut = false;
+            }
+        }
+
+        // Guest user functions
+        function signInAsUser() {
+            window.location.href = 'index.html';
+        }
+
+        function createAccount() {
+            window.location.href = 'index.html#signup';
         }
 
         // Get average attempts for difficulty
@@ -1086,14 +1456,14 @@
                 };
                 
                 // Show save modal if user is logged in
-                if (currentUser) {
-                    setTimeout(() => showSaveModal(), 800); // Shortened from 1500ms to 800ms
+                if (currentUser && !isGuestMode) {
+                    setTimeout(() => showSaveModal(), 800);
                 } else {
                     setTimeout(() => {
                         if (confirm('Great job! Sign in to save your results and compete on leaderboards?')) {
                             window.location.href = 'index.html';
                         }
-                    }, 1200); // Shortened from 2000ms to 1200ms
+                    }, 1200);
                 }
             } else {
                 feedbackEl.textContent = `${correctCount} out of ${codeLength} digits correct.`;
@@ -1111,6 +1481,31 @@
             }
         }
 
+        // Enhanced Event Listeners
+        document.addEventListener('click', function(e) {
+            const profileContainer = document.querySelector('.profile-container');
+            const dropdown = document.getElementById('profileDropdown');
+            const saveModal = document.getElementById('saveModal');
+            
+            // Close profile dropdown when clicking outside
+            if (!profileContainer.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+            
+            // Close save modal when clicking outside
+            if (e.target === saveModal) {
+                hideSaveModal();
+            }
+        });
+
+        // Enhanced keyboard controls
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.getElementById('profileDropdown').classList.remove('show');
+                hideSaveModal();
+            }
+        });
+
         // Enter key support
         document.getElementById('guessInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -1118,10 +1513,20 @@
             }
         });
 
-        // Modal click outside to close
-        document.getElementById('saveModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                hideSaveModal();
+        // Handle auth state changes (optional - for real-time updates)
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT') {
+                console.log('User signed out successfully');
+                isGuestMode = true;
+                currentUser = null;
+                updateProfileDisplay(null, true);
+            } else if (event === 'SIGNED_IN') {
+                console.log('User signed in');
+                if (session?.user) {
+                    isGuestMode = false;
+                    currentUser = session.user;
+                    updateProfileDisplay(session.user, false);
+                }
             }
         });
 
@@ -1129,4 +1534,4 @@
         newGame();
     </script>
 </body>
-</html> 
+</html>

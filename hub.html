@@ -223,6 +223,11 @@
             color: #fca5a5;
         }
 
+        .profile-menu-link.primary:hover {
+            background: rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+
         .profile-menu-icon {
             font-size: 1.1rem;
             width: 20px;
@@ -247,6 +252,17 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        /* Guest indicator styling */
+        .guest-indicator {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            display: inline-block;
         }
 
         /* Floating particles */
@@ -730,28 +746,11 @@
             <div class="profile-dropdown" id="profileDropdown">
                 <div class="profile-header">
                     <div class="profile-avatar">👤</div>
-                    <div class="profile-name" id="profileName">Guest User</div>
-                    <div class="profile-email" id="profileEmail">guest@lytic.com</div>
+                    <div class="profile-name" id="profileName">Loading...</div>
+                    <div class="profile-email" id="profileEmail">Please wait...</div>
                 </div>
-                <ul class="profile-menu">
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link" onclick="showDashboard()">
-                            <span class="profile-menu-icon">📊</span>
-                            <span>Profile Dashboard</span>
-                        </button>
-                    </li>
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link" onclick="showSettings()">
-                            <span class="profile-menu-icon">⚙️</span>
-                            <span>Settings</span>
-                        </button>
-                    </li>
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link danger" id="signOutButton" onclick="signOut()">
-                            <span class="profile-menu-icon">🚪</span>
-                            <span>Sign Out</span>
-                        </button>
-                    </li>
+                <ul class="profile-menu" id="profileMenu">
+                    <!-- Menu items will be dynamically generated -->
                 </ul>
             </div>
         </div>
@@ -860,6 +859,7 @@
         // Global state
         let currentUser = null;
         let isSigningOut = false;
+        let isGuestMode = false;
 
         // Initialize user data on page load
         window.addEventListener('load', async () => {
@@ -871,10 +871,11 @@
             try {
                 // Check if user came as guest from URL parameter
                 const urlParams = new URLSearchParams(window.location.search);
-                const isGuest = urlParams.get('guest') === 'true';
+                const guestParam = urlParams.get('guest');
                 
-                if (isGuest) {
+                if (guestParam === 'true') {
                     // User explicitly chose guest mode
+                    isGuestMode = true;
                     currentUser = null;
                     updateProfileDisplay(null, true);
                     return;
@@ -884,18 +885,24 @@
                 
                 if (error) {
                     console.error('Error getting user:', error);
+                    // Fallback to guest mode on error
+                    isGuestMode = true;
+                    updateProfileDisplay(null, true);
                     return;
                 }
 
                 if (user) {
+                    isGuestMode = false;
                     currentUser = user;
                     updateProfileDisplay(user, false);
                 } else {
                     // No user found, assume guest mode
+                    isGuestMode = true;
                     updateProfileDisplay(null, true);
                 }
             } catch (error) {
                 console.error('Failed to load user data:', error);
+                isGuestMode = true;
                 updateProfileDisplay(null, true);
             }
         }
@@ -904,7 +911,7 @@
         function updateProfileDisplay(user, isGuestMode = false) {
             const nameElement = document.getElementById('profileName');
             const emailElement = document.getElementById('profileEmail');
-            const profileMenu = document.querySelector('.profile-menu');
+            const profileMenu = document.getElementById('profileMenu');
 
             if (user && !isGuestMode) {
                 // Authenticated user
@@ -939,12 +946,15 @@
             } else {
                 // Guest user
                 nameElement.textContent = 'Guest User';
-                emailElement.textContent = 'Playing as Guest';
+                emailElement.innerHTML = `
+                    Playing as Guest
+                    <div class="guest-indicator">GUEST MODE</div>
+                `;
                 
                 // Show limited menu for guest users
                 profileMenu.innerHTML = `
                     <li class="profile-menu-item">
-                        <button class="profile-menu-link" onclick="signInAsUser()">
+                        <button class="profile-menu-link primary" onclick="signInAsUser()">
                             <span class="profile-menu-icon">🔑</span>
                             <span>Sign In</span>
                         </button>
@@ -966,12 +976,20 @@
         }
 
         function showDashboard() {
-            alert('Profile Dashboard coming soon! Here you\'ll see your stats, achievements, and game history.');
+            if (isGuestMode) {
+                alert('Sign in to access your profile dashboard and track your progress!');
+            } else {
+                alert('Profile Dashboard coming soon! Here you\'ll see your stats, achievements, and game history.');
+            }
             toggleProfileDropdown();
         }
 
         function showSettings() {
-            alert('Settings coming soon! Here you\'ll customize your game preferences and account settings.');
+            if (isGuestMode) {
+                alert('Sign in to access settings and customize your experience!');
+            } else {
+                alert('Settings coming soon! Here you\'ll customize your game preferences and account settings.');
+            }
             toggleProfileDropdown();
         }
 
@@ -988,11 +1006,13 @@
             const signOutButton = document.getElementById('signOutButton');
             
             // Show loading state
-            signOutButton.classList.add('loading');
-            signOutButton.innerHTML = `
-                <div class="loading-spinner"></div>
-                <span>Signing out...</span>
-            `;
+            if (signOutButton) {
+                signOutButton.classList.add('loading');
+                signOutButton.innerHTML = `
+                    <div class="loading-spinner"></div>
+                    <span>Signing out...</span>
+                `;
+            }
 
             try {
                 // Clear Supabase session properly
@@ -1031,17 +1051,23 @@
         // Guest user functions
         function signInAsUser() {
             window.location.href = 'index.html';
-            toggleProfileDropdown();
         }
 
         function createAccount() {
             window.location.href = 'index.html#signup';
-            toggleProfileDropdown();
         }
 
         // Game Functions
         function playGame(mode) {
-            window.location.href = 'gamesingleplayer.html';
+            if (isGuestMode) {
+                // Optional: Show a message encouraging sign up
+                const shouldContinue = confirm('Playing as guest. Sign in to save your progress and compete on leaderboards. Continue anyway?');
+                if (shouldContinue) {
+                    window.location.href = 'gamesingleplayer.html';
+                }
+            } else {
+                window.location.href = 'gamesingleplayer.html';
+            }
         }
 
         function showComingSoon(feature) {
@@ -1050,7 +1076,12 @@
             const text = document.getElementById('modalText');
             
             title.textContent = `${feature} - Coming Soon`;
-            text.textContent = `${feature} is being carefully crafted to deliver an extraordinary experience. Stay tuned for something remarkable.`;
+            
+            if (isGuestMode) {
+                text.textContent = `${feature} is being carefully crafted to deliver an extraordinary experience. Sign in to be notified when it's ready!`;
+            } else {
+                text.textContent = `${feature} is being carefully crafted to deliver an extraordinary experience. Stay tuned for something remarkable.`;
+            }
             
             modal.classList.add('show');
         }
@@ -1104,12 +1135,15 @@
         supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT') {
                 console.log('User signed out successfully');
-                // Additional cleanup if needed
+                isGuestMode = true;
+                currentUser = null;
+                updateProfileDisplay(null, true);
             } else if (event === 'SIGNED_IN') {
                 console.log('User signed in');
                 if (session?.user) {
+                    isGuestMode = false;
                     currentUser = session.user;
-                    updateProfileDisplay(session.user);
+                    updateProfileDisplay(session.user, false);
                 }
             }
         });

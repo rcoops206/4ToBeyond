@@ -869,6 +869,17 @@
         // Load and display user data
         async function loadUserData() {
             try {
+                // Check if user came as guest from URL parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const isGuest = urlParams.get('guest') === 'true';
+                
+                if (isGuest) {
+                    // User explicitly chose guest mode
+                    currentUser = null;
+                    updateProfileDisplay(null, true);
+                    return;
+                }
+
                 const { data: { user }, error } = await supabase.auth.getUser();
                 
                 if (error) {
@@ -878,32 +889,73 @@
 
                 if (user) {
                     currentUser = user;
-                    updateProfileDisplay(user);
+                    updateProfileDisplay(user, false);
                 } else {
-                    // No user found, show default guest info
-                    updateProfileDisplay(null);
+                    // No user found, assume guest mode
+                    updateProfileDisplay(null, true);
                 }
             } catch (error) {
                 console.error('Failed to load user data:', error);
-                updateProfileDisplay(null);
+                updateProfileDisplay(null, true);
             }
         }
 
         // Update profile display with user information
-        function updateProfileDisplay(user) {
+        function updateProfileDisplay(user, isGuestMode = false) {
             const nameElement = document.getElementById('profileName');
             const emailElement = document.getElementById('profileEmail');
+            const profileMenu = document.querySelector('.profile-menu');
 
-            if (user) {
+            if (user && !isGuestMode) {
+                // Authenticated user
                 const displayName = user.user_metadata?.display_name || 
                                  user.user_metadata?.full_name || 
                                  user.email?.split('@')[0] || 
                                  'User';
                 nameElement.textContent = displayName;
                 emailElement.textContent = user.email || 'No email';
+                
+                // Show full menu for authenticated users
+                profileMenu.innerHTML = `
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="showDashboard()">
+                            <span class="profile-menu-icon">📊</span>
+                            <span>Profile Dashboard</span>
+                        </button>
+                    </li>
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="showSettings()">
+                            <span class="profile-menu-icon">⚙️</span>
+                            <span>Settings</span>
+                        </button>
+                    </li>
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link danger" id="signOutButton" onclick="signOut()">
+                            <span class="profile-menu-icon">🚪</span>
+                            <span>Sign Out</span>
+                        </button>
+                    </li>
+                `;
             } else {
+                // Guest user
                 nameElement.textContent = 'Guest User';
-                emailElement.textContent = 'guest@lytic.com';
+                emailElement.textContent = 'Playing as Guest';
+                
+                // Show limited menu for guest users
+                profileMenu.innerHTML = `
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="signInAsUser()">
+                            <span class="profile-menu-icon">🔑</span>
+                            <span>Sign In</span>
+                        </button>
+                    </li>
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="createAccount()">
+                            <span class="profile-menu-icon">✨</span>
+                            <span>Create Account</span>
+                        </button>
+                    </li>
+                `;
             }
         }
 
@@ -974,6 +1026,17 @@
             } finally {
                 isSigningOut = false;
             }
+        }
+
+        // Guest user functions
+        function signInAsUser() {
+            window.location.href = 'index.html';
+            toggleProfileDropdown();
+        }
+
+        function createAccount() {
+            window.location.href = 'index.html#signup';
+            toggleProfileDropdown();
         }
 
         // Game Functions

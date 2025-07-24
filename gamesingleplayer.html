@@ -48,7 +48,7 @@
             z-index: -1;
         }
 
-        /* User Navigation */
+        /* User Navigation - Simplified */
         .user-nav {
             position: fixed;
             top: 1rem;
@@ -56,21 +56,6 @@
             z-index: 1000;
             display: flex;
             align-items: center;
-            gap: 1rem;
-        }
-
-        .user-info {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 0.5rem 1rem;
-            color: white;
-            font-size: 0.9rem;
-        }
-
-        .auth-buttons {
-            display: flex;
             gap: 0.5rem;
         }
 
@@ -141,12 +126,16 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 0.5rem;
+            font-size: 0.95rem;
         }
 
         .save-stats div:last-child {
             margin-bottom: 0;
             font-weight: 700;
             color: #60a5fa;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            padding-top: 0.5rem;
+            margin-top: 0.5rem;
         }
         
         .container {
@@ -678,18 +667,10 @@
     </style>
 </head>
 <body>
-    <!-- User Navigation -->
+    <!-- User Navigation - Simplified -->
     <div class="user-nav">
-        <div id="userInfo" class="user-info" style="display: none;">
-            Welcome, <span id="userDisplayName">User</span>
-        </div>
-        <div id="authButtons" class="auth-buttons">
-            <button class="nav-button" onclick="window.location.href='index.html'">← Back</button>
-        </div>
-        <div id="userButtons" class="auth-buttons" style="display: none;">
-            <button class="nav-button" onclick="window.location.href='index.html'">← Back</button>
-            <button class="nav-button secondary" onclick="signOut()">Sign Out</button>
-        </div>
+        <button class="nav-button" onclick="window.location.href='index.html'">← Back</button>
+        <button class="nav-button secondary" onclick="signOut()" id="signOutBtn" style="display: none;">Sign Out</button>
     </div>
 
     <!-- Save Result Modal -->
@@ -814,40 +795,42 @@
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
                 currentUser = user;
-                showUserInterface();
-            } else {
-                showGuestInterface();
+                document.getElementById('signOutBtn').style.display = 'block';
             }
         });
 
-        // UI functions
-        function showUserInterface() {
-            document.getElementById('authButtons').style.display = 'none';
-            document.getElementById('userButtons').style.display = 'flex';
-            document.getElementById('userInfo').style.display = 'block';
-            
-            if (currentUser) {
-                document.getElementById('userDisplayName').textContent = 
-                    currentUser.user_metadata?.display_name || 
-                    currentUser.email.split('@')[0];
-            }
-        }
-
-        function showGuestInterface() {
-            document.getElementById('authButtons').style.display = 'flex';
-            document.getElementById('userButtons').style.display = 'none';
-            document.getElementById('userInfo').style.display = 'none';
-        }
-
+        // UI functions - Simplified
         async function signOut() {
             try {
                 const { error } = await supabase.auth.signOut();
                 if (error) throw error;
                 
                 currentUser = null;
-                showGuestInterface();
+                document.getElementById('signOutBtn').style.display = 'none';
+                alert('Signed out successfully');
             } catch (error) {
                 alert('Error signing out: ' + error.message);
+            }
+        }
+
+        // Get average attempts for difficulty
+        async function getAverageAttempts(difficulty) {
+            try {
+                const { data, error } = await supabase
+                    .from('game_results')
+                    .select('attempts')
+                    .eq('difficulty', difficulty)
+                    .eq('completed', true);
+
+                if (error) throw error;
+                
+                if (data.length === 0) return null;
+                
+                const average = data.reduce((sum, result) => sum + result.attempts, 0) / data.length;
+                return Math.round(average * 10) / 10; // Round to 1 decimal place
+            } catch (error) {
+                console.error('Error getting average attempts:', error);
+                return null;
             }
         }
 
@@ -924,14 +907,19 @@
         }
 
         // Show save result modal
-        function showSaveModal() {
+        async function showSaveModal() {
             if (!currentGameResult) return;
             
             const { difficulty, attempts, timeInSeconds, completed, score } = currentGameResult;
             
+            // Get average attempts for this difficulty
+            const avgAttempts = await getAverageAttempts(difficulty);
+            const avgText = avgAttempts ? `${avgAttempts} avg` : 'No data';
+            
             document.getElementById('saveStats').innerHTML = `
                 <div><span>Difficulty:</span><span>${difficulty} digits</span></div>
-                <div><span>Attempts:</span><span>${attempts}</span></div>
+                <div><span>Your Attempts:</span><span>${attempts}</span></div>
+                <div><span>Global Average:</span><span>${avgText}</span></div>
                 <div><span>Time:</span><span>${Math.floor(timeInSeconds / 60)}m ${timeInSeconds % 60}s</span></div>
                 <div><span>Status:</span><span>${completed ? '✅ Won' : '❌ Lost'}</span></div>
                 <div><span>Score:</span><span>${score} points</span></div>
@@ -1104,13 +1092,13 @@
                 
                 // Show save modal if user is logged in
                 if (currentUser) {
-                    setTimeout(() => showSaveModal(), 1500); // Delay to let user enjoy the win message
+                    setTimeout(() => showSaveModal(), 800); // Shortened from 1500ms to 800ms
                 } else {
                     setTimeout(() => {
                         if (confirm('Great job! Sign in to save your results and compete on leaderboards?')) {
                             window.location.href = 'index.html';
                         }
-                    }, 2000);
+                    }, 1200); // Shortened from 2000ms to 1200ms
                 }
             } else {
                 feedbackEl.textContent = `${correctCount} out of ${codeLength} digits correct.`;
@@ -1146,4 +1134,4 @@
         newGame();
     </script>
 </body>
-</html>
+</html> 

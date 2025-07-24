@@ -830,7 +830,7 @@
             document.getElementById('waitlistModal').classList.remove('show');
         }
 
-        // Clean submitWaitlist function
+        // CORS-friendly submitWaitlist function using GET method
         async function submitWaitlist(event) {
             event.preventDefault();
             
@@ -841,15 +841,11 @@
             const email = formData.get('email');
             
             try {
-                const response = await fetch('https://script.google.com/macros/s/AKfycbxP9ZMpSwJmppKnPtVUF5isBFCS7t-hqMbEC2Owrlbsb0UdR-JpjbQ3P04USeyXipb4/exec', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        name: name,
-                        email: email
-                    })
+                // Use GET method with URL parameters to avoid CORS preflight
+                const url = `https://script.google.com/macros/s/AKfycbx9bVGo8aMAbHB9mrTiyFxpTBD2D0jTdoDULz9P0EzFE4qbDjkIhJDIZp8KHneS_aE5/exec?name=${encodeURIComponent(name)}&email=${encodeURIComponent(email)}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET'
                 });
 
                 if (response.ok) {

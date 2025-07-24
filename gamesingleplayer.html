@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exact Match</title>
 
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
      <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
@@ -43,6 +46,107 @@
                 radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.15) 0%, transparent 50%);
             pointer-events: none;
             z-index: -1;
+        }
+
+        /* User Navigation */
+        .user-nav {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 0.5rem 1rem;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .nav-button {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .nav-button.secondary {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+        }
+
+        /* Save Result Modal */
+        .save-modal {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 1rem;
+        }
+
+        .save-modal.show {
+            display: flex;
+        }
+
+        .save-content {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 24px;
+            padding: 3rem;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .save-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 1rem;
+        }
+
+        .save-stats {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            color: #cbd5e1;
+        }
+
+        .save-stats div {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .save-stats div:last-child {
+            margin-bottom: 0;
+            font-weight: 700;
+            color: #60a5fa;
         }
         
         .container {
@@ -509,18 +613,6 @@
             50% { transform: scale(1.02); }
         }
         
-        .win-message {
-            background: #e6f4ea;
-            border: 1px solid #6aaa64;
-            color: #1e7e34;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 20px;
-        }
-        
         .hidden {
             display: none;
         }
@@ -586,6 +678,34 @@
     </style>
 </head>
 <body>
+    <!-- User Navigation -->
+    <div class="user-nav">
+        <div id="userInfo" class="user-info" style="display: none;">
+            Welcome, <span id="userDisplayName">User</span>
+        </div>
+        <div id="authButtons" class="auth-buttons">
+            <button class="nav-button" onclick="window.location.href='index.html'">← Back</button>
+        </div>
+        <div id="userButtons" class="auth-buttons" style="display: none;">
+            <button class="nav-button" onclick="window.location.href='index.html'">← Back</button>
+            <button class="nav-button secondary" onclick="signOut()">Sign Out</button>
+        </div>
+    </div>
+
+    <!-- Save Result Modal -->
+    <div id="saveModal" class="save-modal">
+        <div class="save-content">
+            <h2 class="save-title">🎉 Game Complete!</h2>
+            <div class="save-stats" id="saveStats">
+                <!-- Stats will be populated here -->
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button class="btn btn-primary" onclick="saveResult()">Save Result</button>
+                <button class="btn btn-secondary" onclick="hideSaveModal()">Skip</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <!-- Header -->
         <div class="header">
@@ -671,12 +791,175 @@
     </div>
 
     <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://cbwtexsbwzflmgbwzvpp.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNid3RleHNid3pmbG1nYnd6dnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjU1MTUsImV4cCI6MjA2ODk0MTUxNX0.p4I1mFfNS6b23vYrmjFwSyqZ8_QEcwD_k1paY3iZbm0'
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+
+        // Global user state
+        let currentUser = null;
+
         // Game variables
         let secretCode = [];
         let turnCount = 0;
         let gameWon = false;
         let codeLength = 4;
         let eliminationState = {};
+        let gameStartTime = null;
+        let gameEndTime = null;
+        let currentGameResult = null;
+
+        // Check if user is logged in on page load
+        window.addEventListener('load', async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                currentUser = user;
+                showUserInterface();
+            } else {
+                showGuestInterface();
+            }
+        });
+
+        // UI functions
+        function showUserInterface() {
+            document.getElementById('authButtons').style.display = 'none';
+            document.getElementById('userButtons').style.display = 'flex';
+            document.getElementById('userInfo').style.display = 'block';
+            
+            if (currentUser) {
+                document.getElementById('userDisplayName').textContent = 
+                    currentUser.user_metadata?.display_name || 
+                    currentUser.email.split('@')[0];
+            }
+        }
+
+        function showGuestInterface() {
+            document.getElementById('authButtons').style.display = 'flex';
+            document.getElementById('userButtons').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'none';
+        }
+
+        async function signOut() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                
+                currentUser = null;
+                showGuestInterface();
+            } catch (error) {
+                alert('Error signing out: ' + error.message);
+            }
+        }
+
+        // Save game result
+        async function saveGameResult(gameMode, difficulty, attempts, timeInSeconds, completed, score) {
+            if (!currentUser) {
+                return false;
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('game_results')
+                    .insert([
+                        {
+                            user_id: currentUser.id,
+                            game_mode: gameMode,
+                            difficulty: difficulty,
+                            attempts: attempts,
+                            time_taken: timeInSeconds,
+                            completed: completed,
+                            score: score
+                        }
+                    ]);
+
+                if (error) throw error;
+
+                // Update user stats
+                await updateUserStats();
+                return true;
+            } catch (error) {
+                console.error('Error saving game result:', error);
+                return false;
+            }
+        }
+
+        // Update user stats
+        async function updateUserStats() {
+            try {
+                const { data: results, error } = await supabase
+                    .from('game_results')
+                    .select('score')
+                    .eq('user_id', currentUser.id)
+                    .eq('completed', true);
+
+                if (error) throw error;
+
+                const totalGames = results.length;
+                const bestScore = totalGames > 0 ? Math.max(...results.map(r => r.score)) : 0;
+
+                await supabase
+                    .from('profiles')
+                    .upsert({
+                        id: currentUser.id,
+                        email: currentUser.email,
+                        display_name: currentUser.user_metadata?.display_name || currentUser.email.split('@')[0],
+                        total_games: totalGames,
+                        best_score: bestScore
+                    });
+            } catch (error) {
+                console.error('Error updating user stats:', error);
+            }
+        }
+
+        // Calculate score based on difficulty, attempts, and time
+        function calculateScore(difficulty, attempts, timeInSeconds, completed) {
+            if (!completed) return 0;
+            
+            const baseScore = difficulty * 250; // Base score increases with difficulty
+            const attemptPenalty = Math.max(0, (attempts - difficulty) * 50); // Penalty for extra attempts
+            const timePenalty = Math.min(timeInSeconds * 2, 300); // Time penalty capped at 300
+            const difficultyBonus = difficulty * 100; // Bonus for harder difficulties
+            
+            return Math.max(baseScore - attemptPenalty - timePenalty + difficultyBonus, 100);
+        }
+
+        // Show save result modal
+        function showSaveModal() {
+            if (!currentGameResult) return;
+            
+            const { difficulty, attempts, timeInSeconds, completed, score } = currentGameResult;
+            
+            document.getElementById('saveStats').innerHTML = `
+                <div><span>Difficulty:</span><span>${difficulty} digits</span></div>
+                <div><span>Attempts:</span><span>${attempts}</span></div>
+                <div><span>Time:</span><span>${Math.floor(timeInSeconds / 60)}m ${timeInSeconds % 60}s</span></div>
+                <div><span>Status:</span><span>${completed ? '✅ Won' : '❌ Lost'}</span></div>
+                <div><span>Score:</span><span>${score} points</span></div>
+            `;
+            
+            document.getElementById('saveModal').classList.add('show');
+        }
+
+        function hideSaveModal() {
+            document.getElementById('saveModal').classList.remove('show');
+            currentGameResult = null;
+        }
+
+        async function saveResult() {
+            if (!currentGameResult) return;
+            
+            const { difficulty, attempts, timeInSeconds, completed, score } = currentGameResult;
+            
+            const success = await saveGameResult('solo', difficulty, attempts, timeInSeconds, completed, score);
+            
+            if (success) {
+                alert('Result saved successfully! 🎉');
+            } else {
+                alert('Failed to save result. Please try again.');
+            }
+            
+            hideSaveModal();
+        }
 
         // Initialize elimination grid
         function initializeEliminationGrid() {
@@ -750,6 +1033,9 @@
             
             turnCount = 0;
             gameWon = false;
+            gameStartTime = Date.now();
+            gameEndTime = null;
+            currentGameResult = null;
             
             document.getElementById('turnCounter').textContent = turnCount;
             document.getElementById('historyBody').innerHTML = '';
@@ -798,10 +1084,34 @@
             // Update feedback
             const feedbackEl = document.getElementById('feedback');
             if (correctCount === codeLength) {
+                gameEndTime = Date.now();
+                const timeInSeconds = Math.floor((gameEndTime - gameStartTime) / 1000);
+                const score = calculateScore(codeLength, turnCount, timeInSeconds, true);
+                
                 feedbackEl.textContent = `Perfect! All ${correctCount} digits correct!`;
                 feedbackEl.className = 'feedback correct';
                 document.getElementById('winMessage').classList.remove('hidden');
                 gameWon = true;
+                
+                // Prepare game result
+                currentGameResult = {
+                    difficulty: codeLength,
+                    attempts: turnCount,
+                    timeInSeconds: timeInSeconds,
+                    completed: true,
+                    score: score
+                };
+                
+                // Show save modal if user is logged in
+                if (currentUser) {
+                    setTimeout(() => showSaveModal(), 1500); // Delay to let user enjoy the win message
+                } else {
+                    setTimeout(() => {
+                        if (confirm('Great job! Sign in to save your results and compete on leaderboards?')) {
+                            window.location.href = 'index.html';
+                        }
+                    }, 2000);
+                }
             } else {
                 feedbackEl.textContent = `${correctCount} out of ${codeLength} digits correct.`;
                 feedbackEl.className = 'feedback';
@@ -822,6 +1132,13 @@
         document.getElementById('guessInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 submitGuess();
+            }
+        });
+
+        // Modal click outside to close
+        document.getElementById('saveModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideSaveModal();
             }
         });
 

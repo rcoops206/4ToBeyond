@@ -1533,5 +1533,630 @@
         // Start with a default game
         newGame();
     </script>
+
+
+    // Profile Dashboard 
+
+    <!-- Dashboard Modal - Add this to your existing game page -->
+<div id="dashboardModal" class="dashboard-modal">
+    <div class="dashboard-content">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">📊 Player Dashboard</h1>
+            <button class="close-button" onclick="hideDashboard()">×</button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>Loading your dashboard...</p>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboardData" style="display: none;">
+            <!-- User Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-value" id="totalGames">0</div>
+                    <div class="stat-label">Total Games</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-value" id="gamesWon">0</div>
+                    <div class="stat-label">Games Won</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📈</div>
+                    <div class="stat-value" id="winRate">0%</div>
+                    <div class="stat-label">Win Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-value" id="bestScore">0</div>
+                    <div class="stat-label">Best Score</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⚡</div>
+                    <div class="stat-value" id="avgAttempts">0</div>
+                    <div class="stat-label">Avg Attempts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-value" id="avgTime">0s</div>
+                    <div class="stat-label">Avg Time</div>
+                </div>
+            </div>
+
+            <!-- Performance Analytics -->
+            <div class="performance-section">
+                <h2 class="section-title">📊 Performance Analytics</h2>
+                <div class="chart-card">
+                    <div class="chart-header">Performance by Difficulty</div>
+                    <div class="difficulty-breakdown" id="difficultyBreakdown">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Games -->
+            <div class="recent-games">
+                <h2 class="section-title">🕒 Last 10 Games</h2>
+                <div class="table-container">
+                    <table class="games-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Difficulty</th>
+                                <th>Attempts</th>
+                                <th>Time</th>
+                                <th>Score</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentGamesTable">
+                            <!-- Will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="error-state" style="display: none;">
+            <div class="error-icon">⚠️</div>
+            <h3>Unable to Load Dashboard</h3>
+            <p>Please check your connection and try again.</p>
+            <button class="btn btn-primary" onclick="loadDashboard()">Retry</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Dashboard Modal Styles */
+.dashboard-modal {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(12px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.dashboard-modal.show {
+    display: flex;
+}
+
+.dashboard-content {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 24px;
+    padding: 2rem;
+    max-width: 900px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+    position: relative;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.dashboard-title {
+    font-size: 1.875rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.close-button {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1.2rem;
+}
+
+.close-button:hover {
+    background: rgba(239, 68, 68, 0.3);
+    transform: scale(1.1);
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(96, 165, 250, 0.5);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.stat-icon {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #60a5fa;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Performance Section */
+.performance-section {
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.chart-card {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 16px;
+    padding: 1.5rem;
+}
+
+.chart-header {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.difficulty-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.difficulty-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.8);
+    border-radius: 12px;
+    border-left: 4px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.difficulty-item:hover {
+    transform: translateX(4px);
+}
+
+.difficulty-item.level-4 { border-left-color: #10b981; }
+.difficulty-item.level-5 { border-left-color: #f59e0b; }
+.difficulty-item.level-6 { border-left-color: #ef4444; }
+.difficulty-item.level-7 { border-left-color: #8b5cf6; }
+
+.difficulty-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.difficulty-name {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.difficulty-stats {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.difficulty-score {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #60a5fa;
+}
+
+/* Recent Games */
+.recent-games {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 16px;
+    padding: 1.5rem;
+}
+
+.table-container {
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+.games-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.games-table th {
+    background: rgba(15, 23, 42, 0.8);
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.games-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.games-table tbody tr:hover {
+    background: rgba(96, 165, 250, 0.1);
+}
+
+.status-won {
+    color: #4ade80;
+    font-weight: 600;
+}
+
+.status-lost {
+    color: #f87171;
+    font-weight: 600;
+}
+
+/* Loading State */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid #60a5fa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+/* Error State */
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+}
+
+.error-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.error-state h3 {
+    margin-bottom: 0.5rem;
+    color: #f87171;
+}
+
+.error-state p {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 1.5rem;
+}
+
+/* No Data State */
+.no-data {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dashboard-content {
+        margin: 0.5rem;
+        padding: 1.5rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .games-table {
+        font-size: 0.8rem;
+    }
+
+    .games-table th,
+    .games-table td {
+        padding: 0.5rem;
+    }
+
+    .difficulty-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Dashboard Functions - Add these to your existing JavaScript
+
+async function showDashboard() {
+    if (isGuestMode) {
+        alert('Sign in to access your profile dashboard and track your progress!');
+        toggleProfileDropdown();
+        return;
+    }
+
+    if (!currentUser) {
+        alert('Please sign in to view your dashboard.');
+        toggleProfileDropdown();
+        return;
+    }
+
+    document.getElementById('dashboardModal').classList.add('show');
+    await loadDashboard();
+    toggleProfileDropdown();
+}
+
+function hideDashboard() {
+    document.getElementById('dashboardModal').classList.remove('show');
+}
+
+async function loadDashboard() {
+    const loadingState = document.getElementById('loadingState');
+    const dashboardData = document.getElementById('dashboardData');
+    const errorState = document.getElementById('errorState');
+
+    // Show loading state
+    loadingState.style.display = 'block';
+    dashboardData.style.display = 'none';
+    errorState.style.display = 'none';
+
+    try {
+        if (!currentUser) {
+            throw new Error('User not authenticated');
+        }
+
+        // Fetch user's game results with security check
+        const { data: gameResults, error } = await supabase
+            .from('game_results')
+            .select('*')
+            .eq('user_id', currentUser.id) // Security: Only fetch current user's data
+            .order('created_at', { ascending: false })
+            .limit(50); // Limit for performance
+
+        if (error) {
+            console.error('Database error:', error);
+            throw new Error('Failed to fetch game data');
+        }
+
+        // Calculate and display statistics
+        const stats = calculateUserStats(gameResults || []);
+        updateStatsDisplay(stats);
+
+        // Update difficulty breakdown
+        updateDifficultyBreakdown(gameResults || []);
+
+        // Update recent games table (last 10)
+        updateRecentGamesTable((gameResults || []).slice(0, 10));
+
+        // Show dashboard content
+        loadingState.style.display = 'none';
+        dashboardData.style.display = 'block';
+
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+        
+        // Show error state
+        loadingState.style.display = 'none';
+        errorState.style.display = 'block';
+    }
+}
+
+function calculateUserStats(gameResults) {
+    const totalGames = gameResults.length;
+    const completedGames = gameResults.filter(game => game.completed);
+    const gamesWon = completedGames.length;
+    const winRate = totalGames > 0 ? Math.round((gamesWon / totalGames) * 100) : 0;
+    const bestScore = gameResults.length > 0 ? Math.max(...gameResults.map(g => g.score || 0)) : 0;
+    
+    const avgAttempts = completedGames.length > 0 ? 
+        (completedGames.reduce((sum, game) => sum + game.attempts, 0) / completedGames.length).toFixed(1) : 0;
+    const avgTime = completedGames.length > 0 ? 
+        Math.round(completedGames.reduce((sum, game) => sum + game.time_taken, 0) / completedGames.length) : 0;
+
+    return { totalGames, gamesWon, winRate, bestScore, avgAttempts, avgTime };
+}
+
+function updateStatsDisplay(stats) {
+    document.getElementById('totalGames').textContent = stats.totalGames;
+    document.getElementById('gamesWon').textContent = stats.gamesWon;
+    document.getElementById('winRate').textContent = stats.winRate + '%';
+    document.getElementById('bestScore').textContent = stats.bestScore.toLocaleString();
+    document.getElementById('avgAttempts').textContent = stats.avgAttempts;
+    document.getElementById('avgTime').textContent = stats.avgTime + 's';
+}
+
+function updateDifficultyBreakdown(gameResults) {
+    const breakdown = {};
+    
+    // Initialize breakdown for all difficulties
+    for (let i = 4; i <= 7; i++) {
+        breakdown[i] = { games: 0, won: 0, attempts: [], scores: [] };
+    }
+
+    // Process game results
+    gameResults.forEach(game => {
+        const difficulty = game.difficulty;
+        if (breakdown[difficulty]) {
+            breakdown[difficulty].games++;
+            if (game.completed) {
+                breakdown[difficulty].won++;
+                breakdown[difficulty].attempts.push(game.attempts);
+                breakdown[difficulty].scores.push(game.score || 0);
+            }
+        }
+    });
+
+    const container = document.getElementById('difficultyBreakdown');
+    container.innerHTML = '';
+
+    let hasData = false;
+
+    for (let level = 4; level <= 7; level++) {
+        const data = breakdown[level];
+        if (data.games > 0) {
+            hasData = true;
+        }
+
+        const avgAttempts = data.attempts.length > 0 ? 
+            (data.attempts.reduce((sum, a) => sum + a, 0) / data.attempts.length).toFixed(1) : '0';
+        const bestScore = data.scores.length > 0 ? Math.max(...data.scores) : 0;
+        const winRate = data.games > 0 ? Math.round((data.won / data.games) * 100) : 0;
+
+        const item = document.createElement('div');
+        item.className = `difficulty-item level-${level}`;
+        item.innerHTML = `
+            <div class="difficulty-info">
+                <div class="difficulty-name">${level} Digits</div>
+                <div class="difficulty-stats">${data.games} games • ${winRate}% win rate • ${avgAttempts} avg attempts</div>
+            </div>
+            <div class="difficulty-score">${bestScore.toLocaleString()}</div>
+        `;
+        container.appendChild(item);
+    }
+
+    if (!hasData) {
+        container.innerHTML = '<div class="no-data">No games played yet. Start playing to see your performance analytics!</div>';
+    }
+}
+
+function updateRecentGamesTable(games) {
+    const tbody = document.getElementById('recentGamesTable');
+    tbody.innerHTML = '';
+
+    if (games.length === 0) {
+        const row = tbody.insertRow();
+        row.innerHTML = '<td colspan="6" class="no-data">No games played yet</td>';
+        return;
+    }
+
+    games.forEach(game => {
+        const row = tbody.insertRow();
+        const date = new Date(game.created_at).toLocaleDateString();
+        const time = game.time_taken ? 
+            `${Math.floor(game.time_taken / 60)}:${(game.time_taken % 60).toString().padStart(2, '0')}` : '--';
+        const status = game.completed ? 'Won' : 'Lost';
+        const statusClass = game.completed ? 'status-won' : 'status-lost';
+
+        row.innerHTML = `
+            <td>${date}</td>
+            <td>${game.difficulty} digits</td>
+            <td>${game.attempts}</td>
+            <td>${time}</td>
+            <td>${(game.score || 0).toLocaleString()}</td>
+            <td><span class="${statusClass}">${status}</span></td>
+        `;
+    });
+}
+
+// Event Listeners for Dashboard
+document.addEventListener('click', function(e) {
+    const dashboardModal = document.getElementById('dashboardModal');
+    if (e.target === dashboardModal) {
+        hideDashboard();
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideDashboard();
+    }
+});
+</script>
+
+
+
 </body>
 </html>

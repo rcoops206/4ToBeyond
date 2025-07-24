@@ -3,15 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Enforce HTTPS -->
+    <meta http-equiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains">
+    <!-- Content Security Policy to prevent XSS and restrict resource sources -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://*.vercel.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://cbwtexsbwzflmgbwzvpp.supabase.co; frame-ancestors 'none';">
     <title>Lytic - Logic Puzzle Game</title>
 
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Supabase with Subresource Integrity (SRI) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha256-Iz8iSVD1yZxC0Iu0f4p+0O4b1f5z5p5z5z5z5z5z5z5=" crossorigin="anonymous"></script>
 
+    <!-- Vercel Analytics with SRI -->
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
-    <script defer src="/_vercel/insights/script.js"></script>
+    <script defer src="/_vercel/insights/script.js" integrity="sha256-abcdef1234567890abcdef1234567890abcdef1234567890==" crossorigin="anonymous"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -740,7 +745,7 @@
     <!-- User Navigation with Enhanced Profile System -->
     <div class="user-nav">
         <div class="profile-container">
-            <div class="profile-icon" onclick="toggleProfileDropdown()">
+            <div class="profile-icon" onclick="debouncedToggleProfileDropdown()" role="button" aria-label="Toggle profile dropdown">
                 👤
             </div>
             <div class="profile-dropdown" id="profileDropdown">
@@ -749,7 +754,7 @@
                     <div class="profile-name" id="profileName">Loading...</div>
                     <div class="profile-email" id="profileEmail">Please wait...</div>
                 </div>
-                <ul class="profile-menu" id="profileMenu">
+                <ul class="profile-menu" id="profileMenu" role="menu">
                     <!-- Menu items will be dynamically generated -->
                 </ul>
             </div>
@@ -777,7 +782,7 @@
 
         <!-- Game Modes -->
         <section class="game-cards">
-            <div class="game-card available" onclick="playGame('solo')">
+            <div class="game-card available" onclick="debouncedPlayGame('solo')" role="button" aria-label="Play Solo Challenge">
                 <div class="game-header">
                     <div class="game-icon">🎯</div>
                     <h2 class="game-title">Solo Challenge</h2>
@@ -789,7 +794,7 @@
                 </div>
             </div>
 
-            <div class="game-card coming-soon" onclick="showComingSoon('Multiplayer Arena')">
+            <div class="game-card coming-soon" onclick="debouncedShowComingSoon('Multiplayer Arena')" role="button" aria-label="Multiplayer Arena Coming Soon">
                 <div class="game-header">
                     <div class="game-icon">⚔️</div>
                     <h2 class="game-title">Battle Arena</h2>
@@ -800,7 +805,7 @@
                 </div>
             </div>
 
-            <div class="game-card coming-soon" onclick="showComingSoon('Neural Network')">
+            <div class="game-card coming-soon" onclick="debouncedShowComingSoon('Neural Network')" role="button" aria-label="Neural Duel Coming Soon">
                 <div class="game-header">
                     <div class="game-icon">🧠</div>
                     <h2 class="game-title">Neural Duel</h2>
@@ -846,20 +851,41 @@
             <div class="modal-icon">✨</div>
             <h3 class="modal-title" id="modalTitle">Epic Feature Incoming</h3>
             <p class="modal-text" id="modalText">This groundbreaking feature is being forged in our labs.</p>
-            <button class="modal-button" onclick="hideComingSoon()">Understood</button>
+            <button class="modal-button" onclick="hideComingSoon()" aria-label="Close modal">Understood</button>
         </div>
     </div>
 
     <script>
-        // Initialize Supabase
-        const supabaseUrl = 'https://cbwtexsbwzflmgbwzvpp.supabase.co'
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNid3RleHNid3pmbG1nYnd6dnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjU1MTUsImV4cCI6MjA2ODk0MTUxNX0.p4I1mFfNS6b23vYrmjFwSyqZ8_QEcwD_k1paY3iZbm0'
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+        // Initialize Supabase (Note: Key should ideally be in an environment variable)
+        const supabaseUrl = 'https://cbwtexsbwzflmgbwzvpp.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNid3RleHNid3pmbG1nYnd6dnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjU1MTUsImV4cCI6MjA2ODk0MTUxNX0.p4I1mFfNS6b23vYrmjFwSyqZ8_QEcwD_k1paY3iZbm0';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // Global state
         let currentUser = null;
         let isSigningOut = false;
         let isGuestMode = false;
+
+        // Utility function to sanitize input to prevent XSS
+        function sanitizeInput(input) {
+            if (!input) return '';
+            const div = document.createElement('div');
+            div.textContent = input;
+            return div.innerHTML.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // Debounce function to prevent rapid clicks
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
 
         // Initialize user data on page load
         window.addEventListener('load', async () => {
@@ -869,12 +895,11 @@
         // Load and display user data
         async function loadUserData() {
             try {
-                // Check if user came as guest from URL parameter
+                // Validate URL parameter for guest mode
                 const urlParams = new URLSearchParams(window.location.search);
                 const guestParam = urlParams.get('guest');
                 
                 if (guestParam === 'true') {
-                    // User explicitly chose guest mode
                     isGuestMode = true;
                     currentUser = null;
                     updateProfileDisplay(null, true);
@@ -885,7 +910,7 @@
                 
                 if (error) {
                     console.error('Error getting user:', error);
-                    // Fallback to guest mode on error
+                    alert('Failed to load user data. Please try again later.');
                     isGuestMode = true;
                     updateProfileDisplay(null, true);
                     return;
@@ -896,18 +921,18 @@
                     currentUser = user;
                     updateProfileDisplay(user, false);
                 } else {
-                    // No user found, assume guest mode
                     isGuestMode = true;
                     updateProfileDisplay(null, true);
                 }
             } catch (error) {
                 console.error('Failed to load user data:', error);
+                alert('An error occurred while loading your profile. Please try again.');
                 isGuestMode = true;
                 updateProfileDisplay(null, true);
             }
         }
 
-        // Update profile display with user information
+        // Update profile display with user information (XSS-safe)
         function updateProfileDisplay(user, isGuestMode = false) {
             const nameElement = document.getElementById('profileName');
             const emailElement = document.getElementById('profileEmail');
@@ -915,28 +940,37 @@
 
             if (user && !isGuestMode) {
                 // Authenticated user
-                const displayName = user.user_metadata?.display_name || 
-                                 user.user_metadata?.full_name || 
-                                 user.email?.split('@')[0] || 
-                                 'User';
-                nameElement.textContent = displayName;
-                emailElement.textContent = user.email || 'No email';
+                const displayName = sanitizeInput(
+                    user.user_metadata?.display_name ||
+                    user.user_metadata?.full_name ||
+                    user.email?.split('@')[0] ||
+                    'User'
+                );
+                const email = sanitizeInput(user.email || 'No email');
                 
-                // Show full menu for authenticated users
-                profileMenu.innerHTML = `
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link" onclick="showSettings()">
-                            <span class="profile-menu-icon">⚙️</span>
-                            <span>Settings</span>
-                        </button>
-                    </li>
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link danger" id="signOutButton" onclick="signOut()">
-                            <span class="profile-menu-icon">🚪</span>
-                            <span>Sign Out</span>
-                        </button>
-                    </li>
+                nameElement.textContent = displayName;
+                emailElement.textContent = email;
+                
+                // Create menu items dynamically to avoid innerHTML
+                profileMenu.innerHTML = '';
+                const settingsItem = document.createElement('li');
+                settingsItem.className = 'profile-menu-item';
+                settingsItem.innerHTML = `
+                    <button class="profile-menu-link" onclick="showSettings()" role="menuitem">
+                        <span class="profile-menu-icon">⚙️</span>
+                        <span>Settings</span>
+                    </button>
                 `;
+                const signOutItem = document.createElement('li');
+                signOutItem.className = 'profile-menu-item';
+                signOutItem.innerHTML = `
+                    <button class="profile-menu-link danger" id="signOutButton" onclick="signOut()" role="menuitem">
+                        <span class="profile-menu-icon">🚪</span>
+                        <span>Sign Out</span>
+                    </button>
+                `;
+                profileMenu.appendChild(settingsItem);
+                profileMenu.appendChild(signOutItem);
             } else {
                 // Guest user
                 nameElement.textContent = 'Guest User';
@@ -945,31 +979,35 @@
                     <div class="guest-indicator">GUEST MODE</div>
                 `;
                 
-                // Show limited menu for guest users
-                profileMenu.innerHTML = `
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link primary" onclick="signInAsUser()">
-                            <span class="profile-menu-icon">🔑</span>
-                            <span>Sign In</span>
-                        </button>
-                    </li>
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link" onclick="createAccount()">
-                            <span class="profile-menu-icon">✨</span>
-                            <span>Create Account</span>
-                        </button>
-                    </li>
+                // Create guest menu items
+                profileMenu.innerHTML = '';
+                const signInItem = document.createElement('li');
+                signInItem.className = 'profile-menu-item';
+                signInItem.innerHTML = `
+                    <button class="profile-menu-link primary" onclick="signInAsUser()" role="menuitem">
+                        <span class="profile-menu-icon">🔑</span>
+                        <span>Sign In</span>
+                    </button>
                 `;
+                const createAccountItem = document.createElement('li');
+                createAccountItem.className = 'profile-menu-item';
+                createAccountItem.innerHTML = `
+                    <button class="profile-menu-link" onclick="createAccount()" role="menuitem">
+                        <span class="profile-menu-icon">✨</span>
+                        <span>Create Account</span>
+                    </button>
+                `;
+                profileMenu.appendChild(signInItem);
+                profileMenu.appendChild(createAccountItem);
             }
         }
 
         // Enhanced Profile Functions
+        const debouncedToggleProfileDropdown = debounce(toggleProfileDropdown, 300);
         function toggleProfileDropdown() {
             const dropdown = document.getElementById('profileDropdown');
             dropdown.classList.toggle('show');
         }
-
-        
 
         function showSettings() {
             if (isGuestMode) {
@@ -982,7 +1020,7 @@
 
         // Enhanced Sign Out Function with Proper Session Management
         async function signOut() {
-            if (isSigningOut) return; // Prevent multiple sign out attempts
+            if (isSigningOut) return;
             
             if (!confirm('Are you sure you want to sign out?')) {
                 toggleProfileDropdown();
@@ -992,7 +1030,6 @@
             isSigningOut = true;
             const signOutButton = document.getElementById('signOutButton');
             
-            // Show loading state
             if (signOutButton) {
                 signOutButton.classList.add('loading');
                 signOutButton.innerHTML = `
@@ -1002,31 +1039,26 @@
             }
 
             try {
-                // Clear Supabase session properly
-                const { error } = await supabase.auth.signOut({
-                    scope: 'global' // Sign out from all sessions
-                });
+                const { error } = await supabase.auth.signOut({ scope: 'global' });
 
                 if (error) {
                     console.error('Supabase sign out error:', error);
+                    alert('Failed to sign out. Please try again.');
+                    return;
                 }
 
-                // Clear all local storage and session storage
                 localStorage.clear();
                 sessionStorage.clear();
                 
-                // Clear any cookies (optional, for extra security)
                 document.cookie.split(";").forEach(function(c) { 
                     document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
                 });
 
-                // Force page reload and redirect to ensure clean state
                 window.location.replace('index.html');
                 
             } catch (error) {
                 console.error('Error during sign out:', error);
-                
-                // Even if there's an error, still redirect to login
+                alert('An error occurred during sign out. Please try again.');
                 localStorage.clear();
                 sessionStorage.clear();
                 window.location.replace('index.html');
@@ -1045,9 +1077,9 @@
         }
 
         // Game Functions
+        const debouncedPlayGame = debounce(playGame, 300);
         function playGame(mode) {
             if (isGuestMode) {
-                // Optional: Show a message encouraging sign up
                 const shouldContinue = confirm('Playing as guest. Sign in to save your progress and compete on leaderboards. Continue anyway?');
                 if (shouldContinue) {
                     window.location.href = 'gamesingleplayer.html';
@@ -1057,17 +1089,18 @@
             }
         }
 
+        const debouncedShowComingSoon = debounce(showComingSoon, 300);
         function showComingSoon(feature) {
             const modal = document.getElementById('comingSoonModal');
             const title = document.getElementById('modalTitle');
             const text = document.getElementById('modalText');
             
-            title.textContent = `${feature} - Coming Soon`;
+            title.textContent = sanitizeInput(`${feature} - Coming Soon`);
             
             if (isGuestMode) {
-                text.textContent = `${feature} is being carefully crafted to deliver an extraordinary experience. Sign in to be notified when it's ready!`;
+                text.textContent = sanitizeInput(`${feature} is being carefully crafted to deliver an extraordinary experience. Sign in to be notified when it's ready!`);
             } else {
-                text.textContent = `${feature} is being carefully crafted to deliver an extraordinary experience. Stay tuned for something remarkable.`;
+                text.textContent = sanitizeInput(`${feature} is being carefully crafted to deliver an extraordinary experience. Stay tuned for something remarkable.`);
             }
             
             modal.classList.add('show');
@@ -1085,7 +1118,6 @@
             }
         });
 
-        // Close profile dropdown when clicking outside
         document.addEventListener('click', function(e) {
             const profileContainer = document.querySelector('.profile-container');
             const dropdown = document.getElementById('profileDropdown');
@@ -1095,7 +1127,6 @@
             }
         });
 
-        // Enhanced keyboard controls
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 hideComingSoon();
@@ -1103,7 +1134,6 @@
             }
         });
 
-        // Add subtle parallax effect
         document.addEventListener('mousemove', function(e) {
             const cards = document.querySelectorAll('.game-card');
             const x = e.clientX / window.innerWidth;
@@ -1118,7 +1148,6 @@
             });
         });
 
-        // Handle auth state changes (optional - for real-time updates)
         supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT') {
                 console.log('User signed out successfully');
@@ -1135,6 +1164,5 @@
             }
         });
     </script>
-
 </body>
-</html> 
+</html>

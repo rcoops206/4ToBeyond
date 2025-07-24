@@ -925,12 +925,6 @@
                 // Show full menu for authenticated users
                 profileMenu.innerHTML = `
                     <li class="profile-menu-item">
-                        <button class="profile-menu-link" onclick="showDashboard()">
-                            <span class="profile-menu-icon">📊</span>
-                            <span>Profile Dashboard</span>
-                        </button>
-                    </li>
-                    <li class="profile-menu-item">
                         <button class="profile-menu-link" onclick="showSettings()">
                             <span class="profile-menu-icon">⚙️</span>
                             <span>Settings</span>
@@ -975,14 +969,7 @@
             dropdown.classList.toggle('show');
         }
 
-        function showDashboard() {
-            if (isGuestMode) {
-                alert('Sign in to access your profile dashboard and track your progress!');
-            } else {
-                alert('Profile Dashboard coming soon! Here you\'ll see your stats, achievements, and game history.');
-            }
-            toggleProfileDropdown();
-        }
+        
 
         function showSettings() {
             if (isGuestMode) {
@@ -1150,4 +1137,4 @@
     </script>
 
 </body>
-</html>
+</html> 

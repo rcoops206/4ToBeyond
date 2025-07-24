@@ -77,7 +77,7 @@
             }
         }
 
-        /* User Navigation */
+        /* User Navigation with Profile System */
         .user-nav {
             position: fixed;
             top: 1rem;
@@ -227,6 +227,26 @@
             font-size: 1.1rem;
             width: 20px;
             text-align: center;
+        }
+
+        /* Loading state for sign out */
+        .profile-menu-link.loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         /* Floating particles */
@@ -701,7 +721,7 @@
     </style>
 </head>
 <body>
-    <!-- User Navigation -->
+    <!-- User Navigation with Enhanced Profile System -->
     <div class="user-nav">
         <div class="profile-container">
             <div class="profile-icon" onclick="toggleProfileDropdown()">
@@ -710,8 +730,8 @@
             <div class="profile-dropdown" id="profileDropdown">
                 <div class="profile-header">
                     <div class="profile-avatar">👤</div>
-                    <div class="profile-name">Guest User</div>
-                    <div class="profile-email">guest@lytic.com</div>
+                    <div class="profile-name" id="profileName">Guest User</div>
+                    <div class="profile-email" id="profileEmail">guest@lytic.com</div>
                 </div>
                 <ul class="profile-menu">
                     <li class="profile-menu-item">
@@ -727,7 +747,7 @@
                         </button>
                     </li>
                     <li class="profile-menu-item">
-                        <button class="profile-menu-link danger" onclick="signOut()">
+                        <button class="profile-menu-link danger" id="signOutButton" onclick="signOut()">
                             <span class="profile-menu-icon">🚪</span>
                             <span>Sign Out</span>
                         </button>
@@ -837,10 +857,57 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNid3RleHNid3pmbG1nYnd6dnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjU1MTUsImV4cCI6MjA2ODk0MTUxNX0.p4I1mFfNS6b23vYrmjFwSyqZ8_QEcwD_k1paY3iZbm0'
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
 
-        function playGame(mode) {
-            window.location.href = 'gamesingleplayer.html';
+        // Global state
+        let currentUser = null;
+        let isSigningOut = false;
+
+        // Initialize user data on page load
+        window.addEventListener('load', async () => {
+            await loadUserData();
+        });
+
+        // Load and display user data
+        async function loadUserData() {
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser();
+                
+                if (error) {
+                    console.error('Error getting user:', error);
+                    return;
+                }
+
+                if (user) {
+                    currentUser = user;
+                    updateProfileDisplay(user);
+                } else {
+                    // No user found, show default guest info
+                    updateProfileDisplay(null);
+                }
+            } catch (error) {
+                console.error('Failed to load user data:', error);
+                updateProfileDisplay(null);
+            }
         }
 
+        // Update profile display with user information
+        function updateProfileDisplay(user) {
+            const nameElement = document.getElementById('profileName');
+            const emailElement = document.getElementById('profileEmail');
+
+            if (user) {
+                const displayName = user.user_metadata?.display_name || 
+                                 user.user_metadata?.full_name || 
+                                 user.email?.split('@')[0] || 
+                                 'User';
+                nameElement.textContent = displayName;
+                emailElement.textContent = user.email || 'No email';
+            } else {
+                nameElement.textContent = 'Guest User';
+                emailElement.textContent = 'guest@lytic.com';
+            }
+        }
+
+        // Enhanced Profile Functions
         function toggleProfileDropdown() {
             const dropdown = document.getElementById('profileDropdown');
             dropdown.classList.toggle('show');
@@ -856,11 +923,62 @@
             toggleProfileDropdown();
         }
 
-        function signOut() {
-            if (confirm('Are you sure you want to sign out?')) {
-                window.location.href = 'index.html';
+        // Enhanced Sign Out Function with Proper Session Management
+        async function signOut() {
+            if (isSigningOut) return; // Prevent multiple sign out attempts
+            
+            if (!confirm('Are you sure you want to sign out?')) {
+                toggleProfileDropdown();
+                return;
             }
-            toggleProfileDropdown();
+
+            isSigningOut = true;
+            const signOutButton = document.getElementById('signOutButton');
+            
+            // Show loading state
+            signOutButton.classList.add('loading');
+            signOutButton.innerHTML = `
+                <div class="loading-spinner"></div>
+                <span>Signing out...</span>
+            `;
+
+            try {
+                // Clear Supabase session properly
+                const { error } = await supabase.auth.signOut({
+                    scope: 'global' // Sign out from all sessions
+                });
+
+                if (error) {
+                    console.error('Supabase sign out error:', error);
+                }
+
+                // Clear all local storage and session storage
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Clear any cookies (optional, for extra security)
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+
+                // Force page reload and redirect to ensure clean state
+                window.location.replace('index.html');
+                
+            } catch (error) {
+                console.error('Error during sign out:', error);
+                
+                // Even if there's an error, still redirect to login
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.replace('index.html');
+            } finally {
+                isSigningOut = false;
+            }
+        }
+
+        // Game Functions
+        function playGame(mode) {
+            window.location.href = 'gamesingleplayer.html';
         }
 
         function showComingSoon(feature) {
@@ -879,7 +997,7 @@
             modal.classList.remove('show');
         }
 
-        // Enhanced modal interactions
+        // Enhanced Event Listeners
         document.getElementById('comingSoonModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 hideComingSoon();
@@ -896,6 +1014,7 @@
             }
         });
 
+        // Enhanced keyboard controls
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 hideComingSoon();
@@ -916,6 +1035,20 @@
                 
                 card.style.transform = `translate(${xPos}px, ${yPos}px)`;
             });
+        });
+
+        // Handle auth state changes (optional - for real-time updates)
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT') {
+                console.log('User signed out successfully');
+                // Additional cleanup if needed
+            } else if (event === 'SIGNED_IN') {
+                console.log('User signed in');
+                if (session?.user) {
+                    currentUser = session.user;
+                    updateProfileDisplay(session.user);
+                }
+            }
         });
     </script>
 

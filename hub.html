@@ -3,19 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lytic - Logic Puzzle Game</title>
+    <title>Lytic - Game Hub</title>
 
-    <!-- Supabase -->
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.supabase.co https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://vitals.vercel-analytics.com; img-src 'self' data: https:; frame-ancestors 'none';">
+
+    <!-- 🔧 SECURE CONFIG: Load configuration system FIRST -->
+    <script src="config-loader.js"></script>
+    
+    <!-- Supabase (loaded AFTER config) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+    <!-- Vercel Analytics -->
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
 
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <style>
         * {
             margin: 0;
@@ -30,6 +43,70 @@
             line-height: 1.6;
             min-height: 100vh;
             overflow-x: hidden;
+        }
+
+        /* Loading screen styles */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            flex-direction: column;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #10b981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading-subtext {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .app-content {
+            display: none;
+            width: 100%;
+        }
+
+        .app-content.ready {
+            display: block;
+        }
+
+        /* Environment badge (dev only) */
+        .env-badge {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #f59e0b;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            display: none;
         }
 
         /* Animated background */
@@ -212,18 +289,18 @@
             text-align: left;
         }
 
-        .profile-menu-link:hover {
+        .profile-menu-link:hover:not(:disabled) {
             background: rgba(255, 255, 255, 0.1);
             color: white;
             transform: translateX(4px);
         }
 
-        .profile-menu-link.danger:hover {
+        .profile-menu-link.danger:hover:not(:disabled) {
             background: rgba(239, 68, 68, 0.2);
             color: #fca5a5;
         }
 
-        .profile-menu-link.primary:hover {
+        .profile-menu-link.primary:hover:not(:disabled) {
             background: rgba(16, 185, 129, 0.2);
             color: #6ee7b7;
         }
@@ -234,7 +311,6 @@
             text-align: center;
         }
 
-        /* Loading state for sign out */
         .profile-menu-link.loading {
             opacity: 0.6;
             pointer-events: none;
@@ -249,12 +325,6 @@
             animation: spin 1s linear infinite;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Guest indicator styling */
         .guest-indicator {
             background: linear-gradient(135deg, #f59e0b, #d97706);
             color: white;
@@ -409,7 +479,7 @@
             left: 100%;
         }
 
-        .game-card:hover {
+        .game-card:hover:not(.disabled) {
             transform: translateY(-8px) scale(1.02);
             border-color: rgba(255, 255, 255, 0.2);
             box-shadow: 
@@ -418,7 +488,7 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
-        .game-card.available:hover {
+        .game-card.available:hover:not(.disabled) {
             border-color: rgba(16, 185, 129, 0.5);
             box-shadow: 
                 0 20px 40px rgba(0, 0, 0, 0.3),
@@ -433,6 +503,15 @@
         .game-card.coming-soon:hover {
             transform: translateY(-4px) scale(1.01);
             border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .game-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .game-card.disabled::before {
+            display: none;
         }
 
         @media (min-width: 640px) {
@@ -467,7 +546,7 @@
             border-color: rgba(16, 185, 129, 0.2);
         }
 
-        .game-card:hover .game-icon {
+        .game-card:hover:not(.disabled) .game-icon {
             transform: scale(1.1) rotateY(180deg);
         }
 
@@ -522,7 +601,7 @@
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .game-card.available:hover .play-arrow {
+        .game-card.available:hover:not(.disabled) .play-arrow {
             opacity: 1;
             transform: translateX(0);
         }
@@ -730,411 +809,749 @@
 
         /* Responsive adjustments */
         @media (max-width: 640px) {
-            .game-card:hover {
+            .game-card:hover:not(.disabled) {
                 transform: translateY(-4px) scale(1.01);
             }
         }
     </style>
 </head>
 <body>
-    <!-- User Navigation with Enhanced Profile System -->
-    <div class="user-nav">
-        <div class="profile-container">
-            <div class="profile-icon" onclick="toggleProfileDropdown()">
-                👤
-            </div>
-            <div class="profile-dropdown" id="profileDropdown">
-                <div class="profile-header">
-                    <div class="profile-avatar">👤</div>
-                    <div class="profile-name" id="profileName">Loading...</div>
-                    <div class="profile-email" id="profileEmail">Please wait...</div>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Lytic Hub</div>
+        <div class="loading-subtext">Setting up secure environment...</div>
+    </div>
+
+    <!-- Environment Badge (dev only) -->
+    <div id="envBadge" class="env-badge"></div>
+
+    <!-- App Content -->
+    <div id="appContent" class="app-content">
+        <!-- User Navigation with Enhanced Profile System -->
+        <div class="user-nav">
+            <div class="profile-container">
+                <div class="profile-icon" onclick="secureHub.toggleProfileDropdown()">
+                    👤
                 </div>
-                <ul class="profile-menu" id="profileMenu">
-                    <!-- Menu items will be dynamically generated -->
-                </ul>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="profile-header">
+                        <div class="profile-avatar">👤</div>
+                        <div class="profile-name" id="profileName">Loading...</div>
+                        <div class="profile-email" id="profileEmail">Please wait...</div>
+                    </div>
+                    <ul class="profile-menu" id="profileMenu">
+                        <!-- Menu items will be dynamically generated -->
+                    </ul>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Floating particles -->
-    <div class="particles">
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-    </div>
+        <!-- Floating particles -->
+        <div class="particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+        </div>
 
-    <div class="container">
-        <!-- Header -->
-        <header class="header fade-in">
-            <h1 class="title">Lytic</h1>
-            <p class="subtitle">Where logic meets elegance</p>
-        </header>
+        <div class="container">
+            <!-- Header -->
+            <header class="header fade-in">
+                <h1 class="title">Lytic</h1>
+                <p class="subtitle">Where logic meets elegance</p>
+            </header>
 
-        <!-- Game Modes -->
-        <section class="game-cards">
-            <div class="game-card available" onclick="playGame('solo')">
-                <div class="game-header">
-                    <div class="game-icon">🎯</div>
-                    <h2 class="game-title">Solo Challenge</h2>
+            <!-- Game Modes -->
+            <section class="game-cards">
+                <div class="game-card available" onclick="secureHub.playGame('solo')" id="soloGameCard">
+                    <div class="game-header">
+                        <div class="game-icon">🎯</div>
+                        <h2 class="game-title">Solo Challenge</h2>
+                    </div>
+                    <p class="game-description">Master the art of deduction. Crack codes, sharpen your mind, and perfect your strategy with every puzzle.</p>
+                    <div class="game-footer">
+                        <span class="status-badge status-available">Play Now</span>
+                        <span class="play-arrow">→</span>
+                    </div>
                 </div>
-                <p class="game-description">Master the art of deduction. Crack codes, sharpen your mind, and perfect your strategy with every puzzle.</p>
-                <div class="game-footer">
-                    <span class="status-badge status-available">Play Now</span>
-                    <span class="play-arrow">→</span>
+
+                <div class="game-card coming-soon" onclick="secureHub.showComingSoon('Multiplayer Arena')" id="multiplayerCard">
+                    <div class="game-header">
+                        <div class="game-icon">⚔️</div>
+                        <h2 class="game-title">Battle Arena</h2>
+                    </div>
+                    <p class="game-description">Face the world's best minds. Compete in real-time matches and claim your place on the global leaderboard.</p>
+                    <div class="game-footer">
+                        <span class="status-badge status-coming-soon">Coming Soon</span>
+                    </div>
                 </div>
+
+                <div class="game-card coming-soon" onclick="secureHub.showComingSoon('Neural Network')" id="aiGameCard">
+                    <div class="game-header">
+                        <div class="game-icon">🧠</div>
+                        <h2 class="game-title">Neural Duel</h2>
+                    </div>
+                    <p class="game-description">Challenge our advanced AI. Experience adaptive difficulty that evolves with your playing style.</p>
+                    <div class="game-footer">
+                        <span class="status-badge status-coming-soon">Coming Soon</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- How to Play -->
+            <section class="how-to-play fade-in">
+                <h3>The Game</h3>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Set the Stage</div>
+                        <div class="step-description">Choose your code complexity from 4 to 7 digits. Higher numbers, greater glory.</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Think & Strike</div>
+                        <div class="step-description">Make strategic guesses and analyze feedback. Every move reveals crucial information.</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Claim Victory</div>
+                        <div class="step-description">Use pure logic to crack the code. Elegance in solution, excellence in execution.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <footer class="footer fade-in">
+                <p>© 2025 Lytic • Crafted for visionaries and problem solvers</p>
+            </footer>
+        </div>
+
+        <!-- Coming Soon Modal -->
+        <div id="comingSoonModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-icon">✨</div>
+                <h3 class="modal-title" id="modalTitle">Epic Feature Incoming</h3>
+                <p class="modal-text" id="modalText">This groundbreaking feature is being forged in our labs.</p>
+                <button class="modal-button" onclick="secureHub.hideComingSoon()">Understood</button>
             </div>
-
-            <div class="game-card coming-soon" onclick="showComingSoon('Multiplayer Arena')">
-                <div class="game-header">
-                    <div class="game-icon">⚔️</div>
-                    <h2 class="game-title">Battle Arena</h2>
-                </div>
-                <p class="game-description">Face the world's best minds. Compete in real-time matches and claim your place on the global leaderboard.</p>
-                <div class="game-footer">
-                    <span class="status-badge status-coming-soon">Coming Soon</span>
-                </div>
-            </div>
-
-            <div class="game-card coming-soon" onclick="showComingSoon('Neural Network')">
-                <div class="game-header">
-                    <div class="game-icon">🧠</div>
-                    <h2 class="game-title">Neural Duel</h2>
-                </div>
-                <p class="game-description">Challenge our advanced AI. Experience adaptive difficulty that evolves with your playing style.</p>
-                <div class="game-footer">
-                    <span class="status-badge status-coming-soon">Coming Soon</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- How to Play -->
-        <section class="how-to-play fade-in">
-            <h3>The Game</h3>
-            <div class="steps">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <div class="step-title">Set the Stage</div>
-                    <div class="step-description">Choose your code complexity from 4 to 7 digits. Higher numbers, greater glory.</div>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <div class="step-title">Think & Strike</div>
-                    <div class="step-description">Make strategic guesses and analyze feedback. Every move reveals crucial information.</div>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <div class="step-title">Claim Victory</div>
-                    <div class="step-description">Use pure logic to crack the code. Elegance in solution, excellence in execution.</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <footer class="footer fade-in">
-            <p>© 2025 Lytic • Crafted for visionaries and problem solvers</p>
-        </footer>
-    </div>
-
-    <!-- Coming Soon Modal -->
-    <div id="comingSoonModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-icon">✨</div>
-            <h3 class="modal-title" id="modalTitle">Epic Feature Incoming</h3>
-            <p class="modal-text" id="modalText">This groundbreaking feature is being forged in our labs.</p>
-            <button class="modal-button" onclick="hideComingSoon()">Understood</button>
         </div>
     </div>
 
     <script>
-        // Initialize Supabase
-        const supabaseUrl = 'https://cbwtexsbwzflmgbwzvpp.supabase.co'
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNid3RleHNid3pmbG1nYnd6dnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjU1MTUsImV4cCI6MjA2ODk0MTUxNX0.p4I1mFfNS6b23vYrmjFwSyqZ8_QEcwD_k1paY3iZbm0'
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+        // 🔧 SECURE HUB MANAGER
+        class SecureHubManager {
+            constructor() {
+                this.currentUser = null;
+                this.isGuestMode = false;
+                this.isSigningOut = false;
+                this.supabase = null;
+                this.appConfig = null;
+                this.isProcessing = false;
+            }
 
-        // Global state
-        let currentUser = null;
-        let isSigningOut = false;
-        let isGuestMode = false;
-
-        // Initialize user data on page load
-        window.addEventListener('load', async () => {
-            await loadUserData();
-        });
-
-        // Load and display user data
-        async function loadUserData() {
-            try {
-                // Check if user came as guest from URL parameter
-                const urlParams = new URLSearchParams(window.location.search);
-                const guestParam = urlParams.get('guest');
+            // Initialize after config is loaded
+            async initialize() {
+                if (!window.supabase || !window.appConfig) {
+                    throw new Error('Supabase or app config not loaded');
+                }
                 
-                if (guestParam === 'true') {
-                    // User explicitly chose guest mode
-                    isGuestMode = true;
-                    currentUser = null;
-                    updateProfileDisplay(null, true);
+                this.supabase = window.supabase;
+                this.appConfig = window.appConfig;
+                
+                // Load and display user data
+                await this.loadUserData();
+                
+                // Set up security monitoring
+                this.setupSecurityMonitoring();
+            }
+
+            // Load and display user data with enhanced security
+            async loadUserData() {
+                try {
+                    // Check if user came as guest from URL parameter
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const guestParam = urlParams.get('guest');
+                    
+                    if (guestParam === 'true') {
+                        // User explicitly chose guest mode
+                        this.isGuestMode = true;
+                        this.currentUser = null;
+                        this.updateProfileDisplay(null, true);
+                        return;
+                    }
+
+                    const { data: { user }, error } = await this.supabase.auth.getUser();
+                    
+                    if (error) {
+                        console.warn('Error getting user:', error);
+                        // Fallback to guest mode on error
+                        this.isGuestMode = true;
+                        this.updateProfileDisplay(null, true);
+                        return;
+                    }
+
+                    if (user) {
+                        this.isGuestMode = false;
+                        this.currentUser = user;
+                        this.updateProfileDisplay(user, false);
+                        
+                        // Log successful user load
+                        console.log('✅ User authenticated:', user.email);
+                    } else {
+                        // No user found, assume guest mode
+                        this.isGuestMode = true;
+                        this.updateProfileDisplay(null, true);
+                        console.log('👤 Guest mode activated');
+                    }
+                } catch (error) {
+                    console.error('Failed to load user data:', error);
+                    this.isGuestMode = true;
+                    this.updateProfileDisplay(null, true);
+                }
+            }
+
+            // Update profile display with user information and security
+            updateProfileDisplay(user, isGuestMode = false) {
+                const nameElement = document.getElementById('profileName');
+                const emailElement = document.getElementById('profileEmail');
+                const profileMenu = document.getElementById('profileMenu');
+
+                if (!nameElement || !emailElement || !profileMenu) {
+                    console.error('Profile elements not found');
                     return;
                 }
 
-                const { data: { user }, error } = await supabase.auth.getUser();
-                
-                if (error) {
-                    console.error('Error getting user:', error);
-                    // Fallback to guest mode on error
-                    isGuestMode = true;
-                    updateProfileDisplay(null, true);
-                    return;
-                }
-
-                if (user) {
-                    isGuestMode = false;
-                    currentUser = user;
-                    updateProfileDisplay(user, false);
+                if (user && !isGuestMode) {
+                    // Authenticated user - sanitize display data
+                    const displayName = this.sanitizeDisplayName(
+                        user.user_metadata?.display_name || 
+                        user.user_metadata?.full_name || 
+                        user.email?.split('@')[0] || 
+                        'User'
+                    );
+                    
+                    nameElement.textContent = displayName;
+                    emailElement.textContent = user.email || 'No email';
+                    
+                    // Show full menu for authenticated users
+                    profileMenu.innerHTML = `
+                        <li class="profile-menu-item">
+                            <button class="profile-menu-link" onclick="secureHub.showSettings()">
+                                <span class="profile-menu-icon">⚙️</span>
+                                <span>Settings</span>
+                            </button>
+                        </li>
+                        <li class="profile-menu-item">
+                            <button class="profile-menu-link danger" id="signOutButton" onclick="secureHub.signOut()">
+                                <span class="profile-menu-icon">🚪</span>
+                                <span>Sign Out</span>
+                            </button>
+                        </li>
+                    `;
                 } else {
-                    // No user found, assume guest mode
-                    isGuestMode = true;
-                    updateProfileDisplay(null, true);
+                    // Guest user
+                    nameElement.textContent = 'Guest User';
+                    emailElement.innerHTML = `
+                        Playing as Guest
+                        <div class="guest-indicator">GUEST MODE</div>
+                    `;
+                    
+                    // Show limited menu for guest users
+                    profileMenu.innerHTML = `
+                        <li class="profile-menu-item">
+                            <button class="profile-menu-link primary" onclick="secureHub.signInAsUser()">
+                                <span class="profile-menu-icon">🔑</span>
+                                <span>Sign In</span>
+                            </button>
+                        </li>
+                        <li class="profile-menu-item">
+                            <button class="profile-menu-link" onclick="secureHub.createAccount()">
+                                <span class="profile-menu-icon">✨</span>
+                                <span>Create Account</span>
+                            </button>
+                        </li>
+                    `;
                 }
-            } catch (error) {
-                console.error('Failed to load user data:', error);
-                isGuestMode = true;
-                updateProfileDisplay(null, true);
             }
-        }
 
-        // Update profile display with user information
-        function updateProfileDisplay(user, isGuestMode = false) {
-            const nameElement = document.getElementById('profileName');
-            const emailElement = document.getElementById('profileEmail');
-            const profileMenu = document.getElementById('profileMenu');
-
-            if (user && !isGuestMode) {
-                // Authenticated user
-                const displayName = user.user_metadata?.display_name || 
-                                 user.user_metadata?.full_name || 
-                                 user.email?.split('@')[0] || 
-                                 'User';
-                nameElement.textContent = displayName;
-                emailElement.textContent = user.email || 'No email';
+            // Sanitize display name for security
+            sanitizeDisplayName(name) {
+                if (typeof name !== 'string') return 'User';
                 
-                // Show full menu for authenticated users
-                profileMenu.innerHTML = `
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link" onclick="showSettings()">
-                            <span class="profile-menu-icon">⚙️</span>
-                            <span>Settings</span>
-                        </button>
-                    </li>
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link danger" id="signOutButton" onclick="signOut()">
-                            <span class="profile-menu-icon">🚪</span>
-                            <span>Sign Out</span>
-                        </button>
-                    </li>
-                `;
-            } else {
-                // Guest user
-                nameElement.textContent = 'Guest User';
-                emailElement.innerHTML = `
-                    Playing as Guest
-                    <div class="guest-indicator">GUEST MODE</div>
-                `;
+                return name
+                    .replace(/[<>]/g, '') // Remove < and >
+                    .replace(/javascript:/gi, '') // Remove javascript: protocols
+                    .replace(/on\w+=/gi, '') // Remove event handlers
+                    .trim()
+                    .substring(0, 50); // Limit length
+            }
+
+            // Enhanced Profile Functions
+            toggleProfileDropdown() {
+                if (this.isProcessing) return;
                 
-                // Show limited menu for guest users
-                profileMenu.innerHTML = `
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link primary" onclick="signInAsUser()">
-                            <span class="profile-menu-icon">🔑</span>
-                            <span>Sign In</span>
-                        </button>
-                    </li>
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link" onclick="createAccount()">
-                            <span class="profile-menu-icon">✨</span>
-                            <span>Create Account</span>
-                        </button>
-                    </li>
-                `;
+                const dropdown = document.getElementById('profileDropdown');
+                if (dropdown) {
+                    dropdown.classList.toggle('show');
+                }
+            }
+
+            showSettings() {
+                if (this.isGuestMode) {
+                    this.showSecureAlert('Sign in to access settings and customize your experience!');
+                } else {
+                    this.showSecureAlert('Settings coming soon! Here you\'ll customize your game preferences and account settings.');
+                }
+                this.toggleProfileDropdown();
+            }
+
+            // Enhanced Sign Out Function with Proper Session Management
+            async signOut() {
+                if (this.isSigningOut || this.isProcessing) return;
+                
+                if (!this.showSecureConfirm('Are you sure you want to sign out?')) {
+                    this.toggleProfileDropdown();
+                    return;
+                }
+
+                this.isSigningOut = true;
+                this.isProcessing = true;
+                
+                const signOutButton = document.getElementById('signOutButton');
+                
+                // Show loading state
+                if (signOutButton) {
+                    signOutButton.classList.add('loading');
+                    signOutButton.innerHTML = `
+                        <div class="loading-spinner"></div>
+                        <span>Signing out...</span>
+                    `;
+                }
+
+                try {
+                    // Clear Supabase session properly
+                    const { error } = await this.supabase.auth.signOut({
+                        scope: 'global' // Sign out from all sessions
+                    });
+
+                    if (error) {
+                        console.error('Supabase sign out error:', error);
+                    }
+
+                    // Clear sensitive storage
+                    this.clearSensitiveStorage();
+                    
+                    console.log('🚪 User signed out successfully');
+                    
+                    // Force page reload and redirect to ensure clean state
+                    window.location.replace('index.html');
+                    
+                } catch (error) {
+                    console.error('Error during sign out:', error);
+                    
+                    // Even if there's an error, still redirect to login
+                    this.clearSensitiveStorage();
+                    window.location.replace('index.html');
+                } finally {
+                    this.isSigningOut = false;
+                    this.isProcessing = false;
+                }
+            }
+
+            // Clear sensitive data securely
+            clearSensitiveStorage() {
+                try {
+                    // Clear sensitive localStorage items
+                    const sensitiveKeys = ['auth_attempts_', 'user_', 'game_', 'session_'];
+                    
+                    Object.keys(localStorage).forEach(key => {
+                        if (sensitiveKeys.some(sensitive => key.startsWith(sensitive))) {
+                            localStorage.removeItem(key);
+                        }
+                    });
+                    
+                    // Clear all sessionStorage
+                    sessionStorage.clear();
+                    
+                    // Clear cookies
+                    document.cookie.split(";").forEach(function(c) { 
+                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                    });
+                } catch (error) {
+                    console.warn('Failed to clear sensitive storage:', error);
+                }
+            }
+
+            // Guest user functions
+            signInAsUser() {
+                this.secureRedirect('index.html');
+            }
+
+            createAccount() {
+                this.secureRedirect('index.html#signup');
+            }
+
+            // Secure redirect with validation
+            secureRedirect(destination) {
+                // Validate the destination against allowed redirects
+                const allowedRedirects = [
+                    'index.html',
+                    'index.html#signup',
+                    'gamesingleplayer.html',
+                    './index.html',
+                    './gamesingleplayer.html'
+                ];
+                
+                if (!allowedRedirects.includes(destination)) {
+                    console.warn('🚨 Unauthorized redirect attempt:', destination);
+                    return;
+                }
+                
+                window.location.href = destination;
+            }
+
+            // Game Functions with security
+            playGame(mode) {
+                if (this.isProcessing) return;
+                
+                // Validate mode parameter
+                const allowedModes = ['solo', 'multiplayer', 'ai'];
+                if (!allowedModes.includes(mode)) {
+                    console.warn('🚨 Invalid game mode:', mode);
+                    return;
+                }
+                
+                this.setGameCardProcessing('soloGameCard', true);
+                
+                if (this.isGuestMode) {
+                    // Optional: Show a message encouraging sign up
+                    const shouldContinue = this.showSecureConfirm('Playing as guest. Sign in to save your progress and compete on leaderboards. Continue anyway?');
+                    
+                    this.setGameCardProcessing('soloGameCard', false);
+                    
+                    if (shouldContinue) {
+                        this.secureRedirect('gamesingleplayer.html');
+                    }
+                } else {
+                    this.secureRedirect('gamesingleplayer.html');
+                }
+            }
+
+            // Set processing state for game cards
+            setGameCardProcessing(cardId, processing) {
+                const card = document.getElementById(cardId);
+                if (!card) return;
+                
+                if (processing) {
+                    card.classList.add('disabled');
+                } else {
+                    card.classList.remove('disabled');
+                }
+            }
+
+            // Secure modal functions
+            showComingSoon(feature) {
+                if (this.isProcessing) return;
+                
+                // Sanitize feature name
+                const sanitizedFeature = this.sanitizeDisplayName(feature);
+                
+                const modal = document.getElementById('comingSoonModal');
+                const title = document.getElementById('modalTitle');
+                const text = document.getElementById('modalText');
+                
+                if (!modal || !title || !text) return;
+                
+                title.textContent = `${sanitizedFeature} - Coming Soon`;
+                
+                if (this.isGuestMode) {
+                    text.textContent = `${sanitizedFeature} is being carefully crafted to deliver an extraordinary experience. Sign in to be notified when it's ready!`;
+                } else {
+                    text.textContent = `${sanitizedFeature} is being carefully crafted to deliver an extraordinary experience. Stay tuned for something remarkable.`;
+                }
+                
+                modal.classList.add('show');
+            }
+
+            hideComingSoon() {
+                const modal = document.getElementById('comingSoonModal');
+                if (modal) {
+                    modal.classList.remove('show');
+                }
+            }
+
+            // Secure alert/confirm functions
+            showSecureAlert(message) {
+                // In production, you might want to use a custom modal instead of alert
+                const sanitizedMessage = this.sanitizeDisplayName(message);
+                alert(sanitizedMessage);
+            }
+
+            showSecureConfirm(message) {
+                // In production, you might want to use a custom modal instead of confirm
+                const sanitizedMessage = this.sanitizeDisplayName(message);
+                return confirm(sanitizedMessage);
+            }
+
+            // Security monitoring
+            setupSecurityMonitoring() {
+                // Monitor for suspicious activity
+                let requestCount = 0;
+                const startTime = Date.now();
+                
+                const originalFetch = window.fetch;
+                window.fetch = async (...args) => {
+                    requestCount++;
+                    
+                    if (requestCount > 50 && (Date.now() - startTime) < 60000) {
+                        console.warn('🚨 High request activity detected');
+                        // In production, you might want to temporarily disable certain features
+                    }
+                    
+                    return originalFetch.apply(this, args);
+                };
+
+                // Session monitoring
+                this.setupSessionMonitoring();
+            }
+
+            setupSessionMonitoring() {
+                let lastActivity = Date.now();
+                const sessionTimeout = 30 * 60 * 1000; // 30 minutes
+
+                const resetActivity = () => {
+                    lastActivity = Date.now();
+                };
+
+                const checkSession = () => {
+                    if (!this.isGuestMode && Date.now() - lastActivity > sessionTimeout) {
+                        console.log('⏰ Session timeout due to inactivity');
+                        this.signOut();
+                    }
+                };
+
+                // Monitor user activity
+                ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+                    document.addEventListener(event, resetActivity, { passive: true });
+                });
+
+                // Check session every 5 minutes
+                setInterval(checkSession, 5 * 60 * 1000);
             }
         }
 
-        // Enhanced Profile Functions
-        function toggleProfileDropdown() {
-            const dropdown = document.getElementById('profileDropdown');
-            dropdown.classList.toggle('show');
-        }
+        // Initialize secure hub manager
+        const secureHub = new SecureHubManager();
 
-        
-
-        function showSettings() {
-            if (isGuestMode) {
-                alert('Sign in to access settings and customize your experience!');
-            } else {
-                alert('Settings coming soon! Here you\'ll customize your game preferences and account settings.');
-            }
-            toggleProfileDropdown();
-        }
-
-        // Enhanced Sign Out Function with Proper Session Management
-        async function signOut() {
-            if (isSigningOut) return; // Prevent multiple sign out attempts
-            
-            if (!confirm('Are you sure you want to sign out?')) {
-                toggleProfileDropdown();
-                return;
-            }
-
-            isSigningOut = true;
-            const signOutButton = document.getElementById('signOutButton');
-            
-            // Show loading state
-            if (signOutButton) {
-                signOutButton.classList.add('loading');
-                signOutButton.innerHTML = `
-                    <div class="loading-spinner"></div>
-                    <span>Signing out...</span>
-                `;
-            }
-
+        // App initialization with proper error handling
+        async function initializeHubApp() {
             try {
-                // Clear Supabase session properly
-                const { error } = await supabase.auth.signOut({
-                    scope: 'global' // Sign out from all sessions
-                });
-
-                if (error) {
-                    console.error('Supabase sign out error:', error);
-                }
-
-                // Clear all local storage and session storage
-                localStorage.clear();
-                sessionStorage.clear();
+                console.log('🏠 Initializing Lytic Hub...');
                 
-                // Clear any cookies (optional, for extra security)
-                document.cookie.split(";").forEach(function(c) { 
-                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-                });
-
-                // Force page reload and redirect to ensure clean state
-                window.location.replace('index.html');
+                // Wait for config to be loaded by config-loader.js
+                let attempts = 0;
+                while ((!window.supabase || !window.appConfig) && attempts < 50) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (!window.supabase || !window.appConfig) {
+                    throw new Error('Failed to load Supabase configuration');
+                }
+                
+                // Initialize hub manager
+                await secureHub.initialize();
+                
+                // Show the app content
+                showApp();
+                
+                console.log('✅ Hub system ready');
                 
             } catch (error) {
-                console.error('Error during sign out:', error);
-                
-                // Even if there's an error, still redirect to login
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.replace('index.html');
-            } finally {
-                isSigningOut = false;
+                console.error('❌ Failed to initialize hub:', error);
+                showAppError(error);
             }
         }
 
-        // Guest user functions
-        function signInAsUser() {
-            window.location.href = 'index.html';
+        function showApp() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            const appContent = document.getElementById('appContent');
+            const envBadge = document.getElementById('envBadge');
+            
+            if (loadingScreen) {
+                loadingScreen.style.display = 'none';
+            }
+            
+            if (appContent) {
+                appContent.classList.add('ready');
+            }
+            
+            // Show environment badge in development
+            if (window.appConfig && window.appConfig.environment && 
+                window.appConfig.environment.includes('development')) {
+                envBadge.textContent = `DEV MODE - ${window.appConfig.domain || 'localhost'}`;
+                envBadge.style.display = 'block';
+            }
         }
 
-        function createAccount() {
-            window.location.href = 'index.html#signup';
+        function showAppError(error) {
+            const loadingScreen = document.getElementById('loadingScreen');
+            if (loadingScreen) {
+                loadingScreen.innerHTML = `
+                    <div style="text-align: center; color: white; max-width: 500px; padding: 2rem;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🚧</div>
+                        <h2 style="margin-bottom: 1rem; color: #ffffff;">Lytic Hub is starting up...</h2>
+                        <p style="margin-bottom: 2rem; color: rgba(255,255,255,0.7); line-height: 1.6;">
+                            We're setting up the secure environment. If this message persists, please refresh the page.
+                        </p>
+                        <button onclick="location.reload()" 
+                                style="padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.3s ease;">
+                            Refresh Page
+                        </button>
+                        <details style="margin-top: 2rem; text-align: left;">
+                            <summary style="cursor: pointer; color: rgba(255,255,255,0.5); margin-bottom: 1rem;">Technical Details</summary>
+                            <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; font-size: 0.8rem; color: rgba(255,255,255,0.7); white-space: pre-wrap; word-wrap: break-word;">${error.message}</pre>
+                        </details>
+                    </div>
+                `;
+            }
         }
 
-        // Game Functions
-        function playGame(mode) {
-            if (isGuestMode) {
-                // Optional: Show a message encouraging sign up
-                const shouldContinue = confirm('Playing as guest. Sign in to save your progress and compete on leaderboards. Continue anyway?');
-                if (shouldContinue) {
-                    window.location.href = 'gamesingleplayer.html';
+        // Enhanced Event Listeners with security
+        document.addEventListener('DOMContentLoaded', () => {
+            // Modal interaction handlers
+            const comingSoonModal = document.getElementById('comingSoonModal');
+            if (comingSoonModal) {
+                comingSoonModal.addEventListener('click', (e) => {
+                    if (e.target === comingSoonModal) {
+                        secureHub.hideComingSoon();
+                    }
+                });
+            }
+
+            // Close profile dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                const profileContainer = document.querySelector('.profile-container');
+                const dropdown = document.getElementById('profileDropdown');
+                
+                if (profileContainer && dropdown && !profileContainer.contains(e.target)) {
+                    dropdown.classList.remove('show');
                 }
-            } else {
-                window.location.href = 'gamesingleplayer.html';
-            }
-        }
+            });
 
-        function showComingSoon(feature) {
-            const modal = document.getElementById('comingSoonModal');
-            const title = document.getElementById('modalTitle');
-            const text = document.getElementById('modalText');
-            
-            title.textContent = `${feature} - Coming Soon`;
-            
-            if (isGuestMode) {
-                text.textContent = `${feature} is being carefully crafted to deliver an extraordinary experience. Sign in to be notified when it's ready!`;
-            } else {
-                text.textContent = `${feature} is being carefully crafted to deliver an extraordinary experience. Stay tuned for something remarkable.`;
-            }
-            
-            modal.classList.add('show');
-        }
-
-        function hideComingSoon() {
-            const modal = document.getElementById('comingSoonModal');
-            modal.classList.remove('show');
-        }
-
-        // Enhanced Event Listeners
-        document.getElementById('comingSoonModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                hideComingSoon();
-            }
-        });
-
-        // Close profile dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            const profileContainer = document.querySelector('.profile-container');
-            const dropdown = document.getElementById('profileDropdown');
-            
-            if (!profileContainer.contains(e.target)) {
-                dropdown.classList.remove('show');
-            }
-        });
-
-        // Enhanced keyboard controls
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                hideComingSoon();
-                document.getElementById('profileDropdown').classList.remove('show');
-            }
-        });
-
-        // Add subtle parallax effect
-        document.addEventListener('mousemove', function(e) {
-            const cards = document.querySelectorAll('.game-card');
-            const x = e.clientX / window.innerWidth;
-            const y = e.clientY / window.innerHeight;
-
-            cards.forEach((card, index) => {
-                const speed = (index + 1) * 0.5;
-                const xPos = (x - 0.5) * speed;
-                const yPos = (y - 0.5) * speed;
+            // Enhanced keyboard controls
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    secureHub.hideComingSoon();
+                    const dropdown = document.getElementById('profileDropdown');
+                    if (dropdown) {
+                        dropdown.classList.remove('show');
+                    }
+                }
                 
-                card.style.transform = `translate(${xPos}px, ${yPos}px)`;
+                // Prevent certain dangerous key combinations in production
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
+                    if (window.appConfig && window.appConfig.environment === 'production') {
+                        e.preventDefault();
+                    }
+                }
+            });
+
+            // Prevent form resubmission on page refresh
+            if (window.history.replaceState) {
+                window.history.replaceState(null, null, window.location.href);
+            }
+        });
+
+        // Initialize app when page loads
+        window.addEventListener('load', initializeHubApp);
+
+        // Handle auth state changes (optional - for real-time updates)
+        window.addEventListener('load', () => {
+            if (window.supabase) {
+                window.supabase.auth.onAuthStateChange((event, session) => {
+                    if (event === 'SIGNED_OUT') {
+                        console.log('🚪 User signed out successfully');
+                        secureHub.isGuestMode = true;
+                        secureHub.currentUser = null;
+                        secureHub.updateProfileDisplay(null, true);
+                    } else if (event === 'SIGNED_IN') {
+                        console.log('🔑 User signed in');
+                        if (session?.user) {
+                            secureHub.isGuestMode = false;
+                            secureHub.currentUser = session.user;
+                            secureHub.updateProfileDisplay(session.user, false);
+                        }
+                    }
+                });
+            }
+        });
+
+        // Add subtle parallax effect (performance optimized)
+        let parallaxRAF = null;
+        document.addEventListener('mousemove', (e) => {
+            if (parallaxRAF) return;
+            
+            parallaxRAF = requestAnimationFrame(() => {
+                const cards = document.querySelectorAll('.game-card');
+                const x = e.clientX / window.innerWidth;
+                const y = e.clientY / window.innerHeight;
+
+                cards.forEach((card, index) => {
+                    if (!card.classList.contains('disabled')) {
+                        const speed = (index + 1) * 0.5;
+                        const xPos = (x - 0.5) * speed;
+                        const yPos = (y - 0.5) * speed;
+                        
+                        card.style.transform = `translate(${xPos}px, ${yPos}px)`;
+                    }
+                });
+                
+                parallaxRAF = null;
             });
         });
 
-        // Handle auth state changes (optional - for real-time updates)
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_OUT') {
-                console.log('User signed out successfully');
-                isGuestMode = true;
-                currentUser = null;
-                updateProfileDisplay(null, true);
-            } else if (event === 'SIGNED_IN') {
-                console.log('User signed in');
-                if (session?.user) {
-                    isGuestMode = false;
-                    currentUser = session.user;
-                    updateProfileDisplay(session.user, false);
+        // Performance monitoring
+        window.addEventListener('load', () => {
+            if (window.performance && window.performance.timing) {
+                const loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
+                if (loadTime > 5000) {
+                    console.warn('⚠️ Slow page load detected:', loadTime + 'ms');
                 }
             }
         });
-    </script>
 
+        // Content Security Policy violation handler
+        document.addEventListener('securitypolicyviolation', (e) => {
+            console.warn('🚨 CSP Violation:', e.violatedDirective, e.sourceFile);
+            
+            // In production, you might want to report this to your security monitoring
+            if (window.appConfig && window.appConfig.environment === 'production') {
+                // Report to security service
+                // fetch('/api/security-violation', { method: 'POST', body: JSON.stringify(e) });
+            }
+        });
+
+        // Prevent common attacks
+        Object.freeze(Object.prototype);
+
+        // Disable right-click in production (optional)
+        if (window.location.hostname === 'lytic.co.uk') {
+            document.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+        }
+
+        // Export for debugging (development only)
+        if (window.appConfig && window.appConfig.environment && window.appConfig.environment.includes('development')) {
+            window.secureHub = secureHub;
+            console.log('🔧 Development mode: secureHub available in console');
+        }
+    </script>
 </body>
-</html> 
+</html>

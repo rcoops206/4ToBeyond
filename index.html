@@ -5,14 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lytic - Logic Puzzle Game</title>
 
-    <!-- Supabase -->
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.supabase.co https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://vitals.vercel-analytics.com; img-src 'self' data: https:; frame-ancestors 'none';">
+
+    <!-- 🔧 SECURE CONFIG: Load configuration system FIRST -->
+    <script src="config-loader.js"></script>
+    
+    <!-- Supabase (loaded AFTER config) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+    <!-- Vercel Analytics -->
     <script>
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
 
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -34,6 +46,70 @@
             justify-content: center;
             overflow: hidden;
             position: relative;
+        }
+
+        /* Loading screen styles */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            flex-direction: column;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #10b981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading-subtext {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .app-content {
+            display: none;
+            width: 100%;
+        }
+
+        .app-content.ready {
+            display: flex;
+        }
+
+        /* Environment badge (dev only) */
+        .env-badge {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #f59e0b;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            display: none;
         }
 
         /* Animated background */
@@ -200,12 +276,18 @@
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
         }
 
+        .auth-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
         .auth-button.primary {
             background: linear-gradient(135deg, #10b981, #059669);
             box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
         }
 
-        .auth-button.primary:hover {
+        .auth-button.primary:hover:not(:disabled) {
             box-shadow: 
                 0 20px 40px rgba(16, 185, 129, 0.6),
                 0 0 0 1px rgba(255, 255, 255, 0.1);
@@ -216,7 +298,7 @@
             box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
         }
 
-        .auth-button.secondary:hover {
+        .auth-button.secondary:hover:not(:disabled) {
             box-shadow: 
                 0 20px 40px rgba(59, 130, 246, 0.6),
                 0 0 0 1px rgba(255, 255, 255, 0.1);
@@ -228,7 +310,7 @@
             color: rgba(255, 255, 255, 0.8);
         }
 
-        .auth-button.guest:hover {
+        .auth-button.guest:hover:not(:disabled) {
             background: rgba(255, 255, 255, 0.05);
             color: rgba(255, 255, 255, 1);
         }
@@ -312,11 +394,36 @@
             cursor: pointer;
             transition: all 0.3s ease;
             font-size: 1rem;
+            position: relative;
         }
 
-        .auth-submit:hover {
+        .auth-submit:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .auth-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .auth-submit.loading {
+            color: transparent;
+        }
+
+        .auth-submit.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
 
         .auth-switch {
@@ -330,6 +437,11 @@
             color: #10b981;
             cursor: pointer;
             text-decoration: underline;
+            font-size: inherit;
+        }
+
+        .auth-switch button:hover {
+            color: #34d399;
         }
 
         .modal-button {
@@ -348,6 +460,28 @@
         .modal-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(107, 114, 128, 0.4);
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .success-message {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            display: none;
         }
 
         /* Entrance animation */
@@ -376,167 +510,607 @@
                 padding: 1.25rem 2rem;
                 font-size: 1.1rem;
             }
+
+            .auth-content {
+                padding: 2rem;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Floating particles -->
-    <div class="particles">
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Starting Lytic</div>
+        <div class="loading-subtext">Loading secure configuration...</div>
     </div>
 
-    <div class="main-container fade-in">
-        <h1 class="title">Lytic</h1>
-        
-        <div class="auth-options">
-            <button class="auth-button primary" onclick="showAuthModal('signup')">
-                🚀 Create Account
-            </button>
-            
-            <button class="auth-button secondary" onclick="showAuthModal('signin')">
-                🔑 Sign In
-            </button>
-            
-            <button class="auth-button guest" onclick="continueAsGuest()">
-                👤 Continue as Guest
-            </button>
+    <!-- Environment Badge (dev only) -->
+    <div id="envBadge" class="env-badge"></div>
+
+    <!-- App Content -->
+    <div id="appContent" class="app-content">
+        <!-- Floating particles -->
+        <div class="particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
         </div>
-    </div>
 
-    <!-- Authentication Modal -->
-    <div id="authModal" class="auth-modal">
-        <div class="auth-content">
-            <h2 class="auth-title" id="authTitle">Sign In</h2>
-            <form class="auth-form" id="authForm" onsubmit="handleAuth(event)">
-                <input type="text" id="displayName" class="auth-input" placeholder="Display Name" style="display: none;">
-                <input type="email" id="email" class="auth-input" placeholder="Email" required>
-                <input type="password" id="password" class="auth-input" placeholder="Password" required>
-                <button type="submit" class="auth-submit" id="authSubmit">Sign In</button>
-            </form>
-            <div class="auth-switch">
-                <span id="authSwitchText">Don't have an account?</span>
-                <button type="button" id="authSwitchBtn" onclick="toggleAuthMode()">Sign Up</button>
+        <div class="main-container fade-in">
+            <h1 class="title">Lytic</h1>
+            
+            <div class="auth-options">
+                <button class="auth-button primary" onclick="secureAuth.showModal('signup')" id="signupBtn">
+                    🚀 Create Account
+                </button>
+                
+                <button class="auth-button secondary" onclick="secureAuth.showModal('signin')" id="signinBtn">
+                    🔑 Sign In
+                </button>
+                
+                <button class="auth-button guest" onclick="secureAuth.continueAsGuest()" id="guestBtn">
+                    👤 Continue as Guest
+                </button>
             </div>
-            <button class="modal-button" onclick="hideAuthModal()">Close</button>
+        </div>
+
+        <!-- Authentication Modal -->
+        <div id="authModal" class="auth-modal">
+            <div class="auth-content">
+                <h2 class="auth-title" id="authTitle">Sign In</h2>
+                
+                <div id="errorMessage" class="error-message"></div>
+                <div id="successMessage" class="success-message"></div>
+                
+                <form class="auth-form" id="authForm">
+                    <input type="text" id="displayName" class="auth-input" placeholder="Display Name" style="display: none;" maxlength="50">
+                    <input type="email" id="email" class="auth-input" placeholder="Email" required maxlength="254">
+                    <input type="password" id="password" class="auth-input" placeholder="Password (min 8 characters)" required minlength="8" maxlength="128">
+                    <button type="submit" class="auth-submit" id="authSubmit">Sign In</button>
+                </form>
+                
+                <div class="auth-switch">
+                    <span id="authSwitchText">Don't have an account?</span>
+                    <button type="button" id="authSwitchBtn" onclick="secureAuth.toggleMode()">Sign Up</button>
+                </div>
+                
+                <button class="modal-button" onclick="secureAuth.hideModal()">Close</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // Initialize Supabase
-        const supabaseUrl = 'https://cbwtexsbwzflmgbwzvpp.supabase.co'
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNid3RleHNid3pmbG1nYnd6dnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjU1MTUsImV4cCI6MjA2ODk0MTUxNX0.p4I1mFfNS6b23vYrmjFwSyqZ8_QEcwD_k1paY3iZbm0'
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
-
-        let authMode = 'signin';
-
-        // Check if user is already logged in on page load
-        window.addEventListener('load', async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                // User is already logged in, redirect to hub
-                window.location.href = 'hub.html';
+        // 🔧 SECURE AUTHENTICATION MANAGER
+        class SecureAuthManager {
+            constructor() {
+                this.mode = 'signin';
+                this.isProcessing = false;
+                this.maxAttempts = 5;
+                this.lockoutDuration = 15 * 60 * 1000; // 15 minutes
+                this.supabase = null;
+                this.appConfig = null;
             }
-        });
 
-        // Authentication functions
-        async function handleAuth(event) {
-            event.preventDefault();
-            
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const displayName = document.getElementById('displayName').value;
-
-            try {
-                if (authMode === 'signup') {
-                    const { data, error } = await supabase.auth.signUp({
-                        email: email,
-                        password: password,
-                        options: {
-                            data: {
-                                display_name: displayName
-                            }
-                        }
-                    });
-
-                    if (error) throw error;
-                    
-                    alert('Please check your email to confirm your account!');
-                    hideAuthModal();
-                } else {
-                    const { data, error } = await supabase.auth.signInWithPassword({
-                        email: email,
-                        password: password
-                    });
-
-                    if (error) throw error;
-                    
-                    // Successful sign in - redirect to hub
-                    window.location.href = 'hub.html';
+            // Initialize after config is loaded
+            async initialize() {
+                if (!window.supabase || !window.appConfig) {
+                    throw new Error('Supabase or app config not loaded');
                 }
+                
+                this.supabase = window.supabase;
+                this.appConfig = window.appConfig;
+                
+                // Check if user is already logged in
+                await this.checkExistingSession();
+            }
+
+            async checkExistingSession() {
+                try {
+                    const { data: { user }, error } = await this.supabase.auth.getUser();
+                    
+                    if (error) {
+                        console.warn('Session check error:', error);
+                        return;
+                    }
+                    
+                    if (user) {
+                        console.log('✅ User already authenticated, redirecting...');
+                        this.redirectToHub();
+                    }
+                } catch (error) {
+                    console.warn('Failed to check existing session:', error);
+                }
+            }
+
+            // Input validation and sanitization
+            validateInput(email, password, displayName = '') {
+                const errors = [];
+                
+                // Email validation
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email) || email.length > 254) {
+                    errors.push('Please enter a valid email address');
+                }
+                
+                // Password validation
+                if (password.length < 8 || password.length > 128) {
+                    errors.push('Password must be between 8 and 128 characters');
+                }
+                
+                // Check for common weak passwords
+                const weakPasswords = ['password', '12345678', 'qwerty123', 'password123'];
+                if (weakPasswords.includes(password.toLowerCase())) {
+                    errors.push('Please choose a stronger password');
+                }
+                
+                // Display name validation (for signup)
+                if (this.mode === 'signup') {
+                    if (!displayName.trim() || displayName.length > 50) {
+                        errors.push('Display name is required and must be under 50 characters');
+                    }
+                    
+                    // Sanitize display name (remove potentially dangerous characters)
+                    const sanitizedName = displayName.replace(/[<>]/g, '').trim();
+                    if (sanitizedName !== displayName.trim()) {
+                        errors.push('Display name contains invalid characters');
+                    }
+                }
+                
+                return { isValid: errors.length === 0, errors };
+            }
+
+            // Rate limiting
+            isRateLimited(email) {
+                try {
+                    const attempts = localStorage.getItem(`auth_attempts_${email}`);
+                    if (!attempts) return false;
+
+                    const { count, lastAttempt } = JSON.parse(attempts);
+                    const now = Date.now();
+
+                    return count >= this.maxAttempts && (now - lastAttempt) < this.lockoutDuration;
+                } catch {
+                    return false;
+                }
+            }
+
+            recordFailedAttempt(email) {
+                try {
+                    const existing = localStorage.getItem(`auth_attempts_${email}`);
+                    const attempts = existing ? JSON.parse(existing) : { count: 0, lastAttempt: 0 };
+                    
+                    attempts.count += 1;
+                    attempts.lastAttempt = Date.now();
+                    
+                    localStorage.setItem(`auth_attempts_${email}`, JSON.stringify(attempts));
+                } catch (error) {
+                    console.warn('Failed to record auth attempt:', error);
+                }
+            }
+
+            clearFailedAttempts(email) {
+                try {
+                    localStorage.removeItem(`auth_attempts_${email}`);
+                } catch (error) {
+                    console.warn('Failed to clear auth attempts:', error);
+                }
+            }
+
+            // Show messages
+            showError(message) {
+                const errorEl = document.getElementById('errorMessage');
+                const successEl = document.getElementById('successMessage');
+                
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+                successEl.style.display = 'none';
+                
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    errorEl.style.display = 'none';
+                }, 5000);
+            }
+
+            showSuccess(message) {
+                const errorEl = document.getElementById('errorMessage');
+                const successEl = document.getElementById('successMessage');
+                
+                successEl.textContent = message;
+                successEl.style.display = 'block';
+                errorEl.style.display = 'none';
+            }
+
+            // UI state management
+            setProcessing(processing) {
+                this.isProcessing = processing;
+                const submitBtn = document.getElementById('authSubmit');
+                const buttons = document.querySelectorAll('.auth-button');
+                
+                if (processing) {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('loading');
+                    buttons.forEach(btn => btn.disabled = true);
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('loading');
+                    buttons.forEach(btn => btn.disabled = false);
+                }
+            }
+
+            // Authentication handlers
+            async handleAuth(event) {
+                event.preventDefault();
+                
+                if (this.isProcessing) return;
+                
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value;
+                const displayName = document.getElementById('displayName').value.trim();
+
+                // Validate inputs
+                const validation = this.validateInput(email, password, displayName);
+                if (!validation.isValid) {
+                    this.showError(validation.errors.join('. '));
+                    return;
+                }
+
+                // Check rate limiting
+                if (this.isRateLimited(email)) {
+                    this.showError('Too many failed attempts. Please try again in 15 minutes.');
+                    return;
+                }
+
+                this.setProcessing(true);
+
+                try {
+                    if (this.mode === 'signup') {
+                        await this.handleSignUp(email, password, displayName);
+                    } else {
+                        await this.handleSignIn(email, password);
+                    }
+                } catch (error) {
+                    console.error('Auth error:', error);
+                    this.recordFailedAttempt(email);
+                    this.showError(this.getFriendlyErrorMessage(error));
+                } finally {
+                    this.setProcessing(false);
+                }
+            }
+
+            async handleSignUp(email, password, displayName) {
+                const { data, error } = await this.supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            display_name: displayName
+                        }
+                    }
+                });
+
+                if (error) throw error;
+                
+                this.showSuccess('Please check your email to confirm your account!');
+                
+                // Clear form and close modal after delay
+                setTimeout(() => {
+                    this.hideModal();
+                }, 3000);
+            }
+
+            async handleSignIn(email, password) {
+                const { data, error } = await this.supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) throw error;
+                
+                this.clearFailedAttempts(email);
+                console.log('✅ Authentication successful');
+                
+                // Successful sign in - redirect to hub
+                this.redirectToHub();
+            }
+
+            getFriendlyErrorMessage(error) {
+                const errorMessages = {
+                    'Invalid login credentials': 'Invalid email or password. Please try again.',
+                    'Email not confirmed': 'Please check your email and click the confirmation link.',
+                    'Too many requests': 'Too many attempts. Please wait a moment and try again.',
+                    'User already registered': 'An account with this email already exists. Try signing in instead.',
+                    'Password should be at least 6 characters': 'Password must be at least 8 characters long.',
+                    'Network request failed': 'Network error. Please check your connection and try again.'
+                };
+
+                return errorMessages[error.message] || `Authentication error: ${error.message}`;
+            }
+
+            // Modal management
+            showModal(mode) {
+                if (this.isProcessing) return;
+                
+                this.mode = mode;
+                
+                const modal = document.getElementById('authModal');
+                const title = document.getElementById('authTitle');
+                const displayNameField = document.getElementById('displayName');
+                const submitBtn = document.getElementById('authSubmit');
+                const switchText = document.getElementById('authSwitchText');
+                const switchBtn = document.getElementById('authSwitchBtn');
+                
+                // Clear any previous messages
+                document.getElementById('errorMessage').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'none';
+                
+                if (mode === 'signup') {
+                    title.textContent = 'Create Account';
+                    displayNameField.style.display = 'block';
+                    displayNameField.required = true;
+                    submitBtn.textContent = 'Sign Up';
+                    switchText.textContent = 'Already have an account?';
+                    switchBtn.textContent = 'Sign In';
+                } else {
+                    title.textContent = 'Sign In';
+                    displayNameField.style.display = 'none';
+                    displayNameField.required = false;
+                    submitBtn.textContent = 'Sign In';
+                    switchText.textContent = "Don't have an account?";
+                    switchBtn.textContent = 'Sign Up';
+                }
+                
+                modal.classList.add('show');
+                
+                // Focus on email field
+                setTimeout(() => {
+                    document.getElementById('email').focus();
+                }, 100);
+            }
+
+            hideModal() {
+                if (this.isProcessing) return;
+                
+                document.getElementById('authModal').classList.remove('show');
+                document.getElementById('authForm').reset();
+                document.getElementById('errorMessage').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'none';
+            }
+
+            toggleMode() {
+                if (this.isProcessing) return;
+                
+                const newMode = this.mode === 'signin' ? 'signup' : 'signin';
+                this.showModal(newMode);
+            }
+
+            continueAsGuest() {
+                if (this.isProcessing) return;
+                
+                console.log('🔓 Continuing as guest');
+                this.redirectToHub('?guest=true');
+            }
+
+            redirectToHub(queryParams = '') {
+                // Add security check to prevent redirect attacks
+                const allowedRedirects = ['hub.html', './hub.html'];
+                const destination = 'hub.html' + queryParams;
+                
+                // Validate the destination
+                if (queryParams && !queryParams.startsWith('?')) {
+                    console.warn('Invalid query parameters detected');
+                    return;
+                }
+                
+                window.location.href = destination;
+            }
+        }
+
+        // Initialize secure authentication manager
+        const secureAuth = new SecureAuthManager();
+
+        // App initialization with proper error handling
+        async function initializeApp() {
+            try {
+                console.log('🔐 Initializing secure authentication...');
+                
+                // Wait for config to be loaded by config-loader.js
+                let attempts = 0;
+                while ((!window.supabase || !window.appConfig) && attempts < 50) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (!window.supabase || !window.appConfig) {
+                    throw new Error('Failed to load Supabase configuration');
+                }
+                
+                // Initialize authentication manager
+                await secureAuth.initialize();
+                
+                // Show the app content
+                showApp();
+                
+                console.log('✅ Authentication system ready');
+                
             } catch (error) {
-                alert('Error: ' + error.message);
+                console.error('❌ Failed to initialize authentication:', error);
+                showAppError(error);
             }
         }
 
-        function showAuthModal(mode) {
-            authMode = mode;
+        function showApp() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            const appContent = document.getElementById('appContent');
+            const envBadge = document.getElementById('envBadge');
             
-            if (mode === 'signup') {
-                document.getElementById('authTitle').textContent = 'Create Account';
-                document.getElementById('displayName').style.display = 'block';
-                document.getElementById('displayName').required = true;
-                document.getElementById('authSubmit').textContent = 'Sign Up';
-                document.getElementById('authSwitchText').textContent = 'Already have an account?';
-                document.getElementById('authSwitchBtn').textContent = 'Sign In';
-            } else {
-                document.getElementById('authTitle').textContent = 'Sign In';
-                document.getElementById('displayName').style.display = 'none';
-                document.getElementById('displayName').required = false;
-                document.getElementById('authSubmit').textContent = 'Sign In';
-                document.getElementById('authSwitchText').textContent = "Don't have an account?";
-                document.getElementById('authSwitchBtn').textContent = 'Sign Up';
+            if (loadingScreen) {
+                loadingScreen.style.display = 'none';
             }
             
-            document.getElementById('authModal').classList.add('show');
-        }
-
-        function hideAuthModal() {
-            document.getElementById('authModal').classList.remove('show');
-            document.getElementById('authForm').reset();
-        }
-
-        function toggleAuthMode() {
-            if (authMode === 'signin') {
-                showAuthModal('signup');
-            } else {
-                showAuthModal('signin');
+            if (appContent) {
+                appContent.classList.add('ready');
+            }
+            
+            // Show environment badge in development
+            if (window.appConfig && window.appConfig.environment && 
+                window.appConfig.environment.includes('development')) {
+                envBadge.textContent = `DEV MODE - ${window.appConfig.domain || 'localhost'}`;
+                envBadge.style.display = 'block';
             }
         }
 
-        function continueAsGuest() {
-            // Redirect to hub without authentication
-            window.location.href = 'hub.html';
+        function showAppError(error) {
+            const loadingScreen = document.getElementById('loadingScreen');
+            if (loadingScreen) {
+                loadingScreen.innerHTML = `
+                    <div style="text-align: center; color: white; max-width: 500px; padding: 2rem;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🚧</div>
+                        <h2 style="margin-bottom: 1rem; color: #ffffff;">Lytic is starting up...</h2>
+                        <p style="margin-bottom: 2rem; color: rgba(255,255,255,0.7); line-height: 1.6;">
+                            We're setting up the secure environment. If this message persists, please refresh the page.
+                        </p>
+                        <button onclick="location.reload()" 
+                                style="padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.3s ease;">
+                            Refresh Page
+                        </button>
+                        <details style="margin-top: 2rem; text-align: left;">
+                            <summary style="cursor: pointer; color: rgba(255,255,255,0.5); margin-bottom: 1rem;">Technical Details</summary>
+                            <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; font-size: 0.8rem; color: rgba(255,255,255,0.7); white-space: pre-wrap; word-wrap: break-word;">${error.message}</pre>
+                        </details>
+                    </div>
+                `;
+            }
         }
 
-        // Modal interactions
-        document.getElementById('authModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                hideAuthModal();
+        // Event listeners with security enhancements
+        document.addEventListener('DOMContentLoaded', () => {
+            // Form submission handler
+            const authForm = document.getElementById('authForm');
+            if (authForm) {
+                authForm.addEventListener('submit', (e) => secureAuth.handleAuth(e));
+            }
+
+            // Modal interaction handlers
+            const authModal = document.getElementById('authModal');
+            if (authModal) {
+                authModal.addEventListener('click', (e) => {
+                    if (e.target === authModal) {
+                        secureAuth.hideModal();
+                    }
+                });
+            }
+
+            // Keyboard handlers
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    secureAuth.hideModal();
+                }
+                
+                // Prevent certain dangerous key combinations
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
+                    if (window.appConfig && window.appConfig.environment === 'production') {
+                        e.preventDefault();
+                    }
+                }
+            });
+
+            // Prevent form resubmission on page refresh
+            if (window.history.replaceState) {
+                window.history.replaceState(null, null, window.location.href);
             }
         });
 
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                hideAuthModal();
+        // Initialize app when page loads
+        window.addEventListener('load', initializeApp);
+
+        // Enhanced security: Monitor for suspicious activity
+        let requestCount = 0;
+        let startTime = Date.now();
+
+        function monitorActivity() {
+            requestCount++;
+            
+            if (requestCount > 50 && (Date.now() - startTime) < 60000) {
+                console.warn('🚨 High activity detected');
+                // In production, you might want to temporarily disable certain features
+            }
+        }
+
+        // Override fetch to monitor requests
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            monitorActivity();
+            return originalFetch.apply(this, args);
+        };
+
+        // Prevent common attacks
+        Object.freeze(Object.prototype);
+        
+        // Content Security Policy violation handler
+        document.addEventListener('securitypolicyviolation', (e) => {
+            console.warn('🚨 CSP Violation:', e.violatedDirective, e.sourceFile);
+            
+            // In production, you might want to report this to your security monitoring
+            if (window.appConfig && window.appConfig.environment === 'production') {
+                // Report to security service
+                // fetch('/api/security-violation', { method: 'POST', body: JSON.stringify(e) });
             }
         });
+
+        // Disable right-click in production (optional)
+        if (window.location.hostname === 'lytic.co.uk') {
+            document.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+        }
+
+        // Session monitoring
+        let lastActivity = Date.now();
+        const sessionTimeout = 30 * 60 * 1000; // 30 minutes
+
+        function resetActivity() {
+            lastActivity = Date.now();
+        }
+
+        function checkSession() {
+            if (Date.now() - lastActivity > sessionTimeout) {
+                console.log('Session timeout due to inactivity');
+                // Handle session timeout
+                if (window.supabase) {
+                    window.supabase.auth.signOut();
+                }
+            }
+        }
+
+        // Monitor user activity
+        ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+            document.addEventListener(event, resetActivity, { passive: true });
+        });
+
+        // Check session every 5 minutes
+        setInterval(checkSession, 5 * 60 * 1000);
+
+        // Performance monitoring
+        window.addEventListener('load', () => {
+            if (window.performance && window.performance.timing) {
+                const loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
+                if (loadTime > 5000) {
+                    console.warn('⚠️ Slow page load detected:', loadTime + 'ms');
+                }
+            }
+        });
+
+        // Export for debugging (development only)
+        if (window.appConfig && window.appConfig.environment && window.appConfig.environment.includes('development')) {
+            window.secureAuth = secureAuth;
+            console.log('🔧 Development mode: secureAuth available in console');
+        }
     </script>
 </body>
 </html>

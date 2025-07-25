@@ -2,12 +2,29 @@ const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
 // Load .env from root directory (one level up from backend)
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize Supabase client
+let supabase = null;
+try {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  
+  if (supabaseUrl && supabaseKey) {
+    supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('✅ Supabase client initialized');
+  } else {
+    console.warn('⚠️ Supabase credentials missing - universal saving will be limited');
+  }
+} catch (error) {
+  console.error('❌ Failed to initialize Supabase:', error.message);
+}
 
 // Enhanced CORS configuration for lytic.co.uk
 const corsOptions = {
@@ -59,12 +76,21 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// ===== NEW: Universal Game Saving Rate Limiter =====
+const saveGameLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // Limit each IP to 30 save requests per minute
+  message: 'Too many save requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Serve static files (your current structure)
 app.use(express.static(path.join(__dirname, '../')));
 app.use('/frontend/dist', express.static(path.join(__dirname, '../frontend/dist')));
 app.use('/frontend/src', express.static(path.join(__dirname, '../frontend/src')));
 
-// Database setup
+// Database setup (SQLite - keeping your existing setup)
 const dbPath = path.join(__dirname, 'games.db');
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
@@ -74,7 +100,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// Initialize database tables
+// Initialize database tables (keeping your existing setup)
 db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS games (
@@ -93,6 +119,107 @@ db.serialize(() => {
     db.run(`ALTER TABLE games ADD COLUMN user_id TEXT`, () => {});
     db.run(`ALTER TABLE games ADD COLUMN session_id TEXT`, () => {});
 });
+
+// ===== NEW: Universal Game Saving Validation & Sanitization =====
+
+// Validation middleware for universal saving
+function validateGameData(req, res, next) {
+    const {
+        session_id,
+        difficulty,
+        attempts,
+        time_taken,
+        completed,
+        score
+    } = req.body;
+
+    const errors = [];
+
+    if (!session_id || typeof session_id !== 'string') {
+        errors.push('session_id is required and must be a string');
+    }
+
+    if (!difficulty || difficulty < 4 || difficulty > 7) {
+        errors.push('difficulty must be between 4 and 7');
+    }
+
+    if (typeof attempts !== 'number' || attempts < 0) {
+        errors.push('attempts must be a non-negative number');
+    }
+
+    if (typeof time_taken !== 'number' || time_taken < 0) {
+        errors.push('time_taken must be a non-negative number');
+    }
+
+    if (typeof completed !== 'boolean') {
+        errors.push('completed must be a boolean');
+    }
+
+    if (typeof score !== 'number' || score < 0) {
+        errors.push('score must be a non-negative number');
+    }
+
+    if (errors.length > 0) {
+        return res.status(400).json({
+            error: 'Validation failed',
+            details: errors
+        });
+    }
+
+    next();
+}
+
+// Sanitize input data
+function sanitizeGameData(data) {
+    return {
+        session_id: String(data.session_id).substring(0, 100),
+        difficulty: Math.max(4, Math.min(7, parseInt(data.difficulty))),
+        attempts: Math.max(0, parseInt(data.attempts)),
+        time_taken: Math.max(0, parseInt(data.time_taken)),
+        completed: Boolean(data.completed),
+        score: Math.max(0, parseInt(data.score || 0)),
+        secret_code: data.secret_code ? String(data.secret_code).replace(/[^0-9]/g, '').substring(0, 7) : null,
+        final_guess: data.final_guess ? String(data.final_guess).replace(/[^0-9]/g, '').substring(0, 7) : null,
+        user_id: data.user_id || null,
+        is_guest: Boolean(data.is_guest),
+        game_started_at: data.game_started_at ? new Date(data.game_started_at).toISOString() : new Date().toISOString(),
+        game_ended_at: data.game_ended_at ? new Date(data.game_ended_at).toISOString() : null,
+        browser_language: data.browser_language ? String(data.browser_language).substring(0, 10) : null,
+        timezone: data.timezone ? String(data.timezone).substring(0, 50) : null,
+        abandoned: Boolean(data.abandoned),
+        abandon_reason: data.abandon_reason ? String(data.abandon_reason).substring(0, 50) : null,
+        device_info: sanitizeDeviceInfo(data.device_info),
+        guess_history: sanitizeGuessHistory(data.guess_history),
+        total_game_time: data.total_game_time ? Math.max(0, parseInt(data.total_game_time)) : null,
+        average_time_per_guess: data.average_time_per_guess ? Math.max(0, parseFloat(data.average_time_per_guess)) : null,
+        win_rate_this_session: data.win_rate_this_session ? Math.max(0, Math.min(100, parseFloat(data.win_rate_this_session))) : null
+    };
+}
+
+function sanitizeDeviceInfo(deviceInfo) {
+    if (!deviceInfo || typeof deviceInfo !== 'object') return null;
+    
+    return {
+        userAgent: deviceInfo.userAgent ? String(deviceInfo.userAgent).substring(0, 500) : null,
+        language: deviceInfo.language ? String(deviceInfo.language).substring(0, 10) : null,
+        timezone: deviceInfo.timezone ? String(deviceInfo.timezone).substring(0, 50) : null,
+        screenWidth: deviceInfo.screenWidth ? Math.max(0, parseInt(deviceInfo.screenWidth)) : null,
+        screenHeight: deviceInfo.screenHeight ? Math.max(0, parseInt(deviceInfo.screenHeight)) : null,
+        timestamp: deviceInfo.timestamp ? new Date(deviceInfo.timestamp).toISOString() : new Date().toISOString()
+    };
+}
+
+function sanitizeGuessHistory(guessHistory) {
+    if (!Array.isArray(guessHistory)) return [];
+    
+    return guessHistory.slice(-20).map(guess => ({
+        turnNumber: guess.turnNumber ? Math.max(0, parseInt(guess.turnNumber)) : 0,
+        guess: guess.guess ? String(guess.guess).replace(/[^0-9]/g, '').substring(0, 7) : '',
+        correctCount: guess.correctCount ? Math.max(0, parseInt(guess.correctCount)) : 0,
+        timestamp: guess.timestamp ? parseInt(guess.timestamp) : Date.now(),
+        timeSinceStart: guess.timeSinceStart ? Math.max(0, parseInt(guess.timeSinceStart)) : 0
+    }));
+}
 
 // ============================================
 // Configuration API for lytic.co.uk
@@ -117,10 +244,11 @@ const getConfig = () => {
         debugging: true,
         guestMode: true,
         localDatabase: true,
-        vercelAnalytics: false
+        vercelAnalytics: false,
+        universalSaving: true
       },
       apiUrl: process.env.API_URL || `http://localhost:${PORT}`,
-      database: 'sqlite',
+      database: 'supabase',
       domain: 'localhost'
     },
     production: {
@@ -133,10 +261,11 @@ const getConfig = () => {
         debugging: false,
         guestMode: true,
         localDatabase: true,
-        vercelAnalytics: true
+        vercelAnalytics: true,
+        universalSaving: true
       },
       apiUrl: process.env.API_URL || 'https://lytic.co.uk',
-      database: 'sqlite',
+      database: 'supabase',
       domain: 'lytic.co.uk'
     }
   };
@@ -191,11 +320,252 @@ app.get('/api/config', configLimiter, (req, res) => {
   }
 });
 
-// Health check endpoint
+// ===== NEW: Universal Game Saving API Endpoints =====
+
+// API endpoint for saving completed games
+app.post('/api/save-game', saveGameLimiter, validateGameData, async (req, res) => {
+    try {
+        console.log('📥 Receiving game data from:', req.ip);
+        
+        const sanitizedData = sanitizeGameData(req.body);
+        sanitizedData.status = sanitizedData.completed ? 'completed' : 'abandoned';
+        sanitizedData.created_at = new Date().toISOString();
+        
+        if (supabase) {
+            // Save to Supabase (primary database)
+            const { data, error } = await supabase
+                .from('game_results')
+                .insert([sanitizedData])
+                .select();
+            
+            if (error) {
+                console.error('❌ Supabase error saving game:', error);
+                
+                if (error.code === '23505') {
+                    return res.status(409).json({
+                        error: 'Duplicate game session',
+                        message: 'This game session has already been saved'
+                    });
+                }
+                
+                return res.status(500).json({
+                    error: 'Failed to save game',
+                    message: 'Database error occurred'
+                });
+            }
+            
+            console.log('✅ Game saved to Supabase successfully:', data[0]?.id);
+            
+            res.status(200).json({
+                success: true,
+                message: 'Game saved successfully',
+                id: data[0]?.id,
+                database: 'supabase'
+            });
+        } else {
+            // Fallback to SQLite if Supabase is not available
+            console.log('⚠️ Supabase not available, falling back to SQLite');
+            
+            db.run(
+                'INSERT INTO games (code_length, total_guesses, won, duration_seconds, user_id, session_id) VALUES (?, ?, ?, ?, ?, ?)',
+                [sanitizedData.difficulty, sanitizedData.attempts, sanitizedData.completed ? 1 : 0, sanitizedData.time_taken, sanitizedData.user_id, sanitizedData.session_id],
+                function(err) {
+                    if (err) {
+                        console.error('❌ SQLite error saving game:', err);
+                        res.status(500).json({ error: 'Failed to save game data' });
+                        return;
+                    }
+                    
+                    console.log(`✅ Game saved to SQLite successfully - ID: ${this.lastID}`);
+                    
+                    res.json({ 
+                        success: true, 
+                        message: 'Game saved successfully',
+                        id: this.lastID,
+                        database: 'sqlite'
+                    });
+                }
+            );
+        }
+        
+    } catch (error) {
+        console.error('❌ Server error saving game:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: 'Failed to save game'
+        });
+    }
+});
+
+// API endpoint for saving abandoned games
+app.post('/api/save-abandoned-game', saveGameLimiter, validateGameData, async (req, res) => {
+    try {
+        console.log('📥 Receiving abandoned game data from:', req.ip);
+        
+        const sanitizedData = sanitizeGameData(req.body);
+        sanitizedData.abandoned = true;
+        sanitizedData.completed = false;
+        sanitizedData.status = 'abandoned';
+        sanitizedData.created_at = new Date().toISOString();
+        
+        if (supabase) {
+            const { data, error } = await supabase
+                .from('game_results')
+                .insert([sanitizedData])
+                .select();
+            
+            if (error) {
+                console.error('❌ Supabase error saving abandoned game:', error);
+                return res.status(500).json({
+                    error: 'Failed to save abandoned game',
+                    message: 'Database error occurred'
+                });
+            }
+            
+            console.log('✅ Abandoned game saved to Supabase successfully:', data[0]?.id);
+            
+            res.status(200).json({
+                success: true,
+                message: 'Abandoned game saved successfully',
+                id: data[0]?.id,
+                database: 'supabase'
+            });
+        } else {
+            // Fallback to SQLite
+            db.run(
+                'INSERT INTO games (code_length, total_guesses, won, duration_seconds, user_id, session_id) VALUES (?, ?, ?, ?, ?, ?)',
+                [sanitizedData.difficulty, sanitizedData.attempts, 0, sanitizedData.time_taken, sanitizedData.user_id, sanitizedData.session_id],
+                function(err) {
+                    if (err) {
+                        console.error('❌ SQLite error saving abandoned game:', err);
+                        res.status(500).json({ error: 'Failed to save abandoned game data' });
+                        return;
+                    }
+                    
+                    console.log(`✅ Abandoned game saved to SQLite successfully - ID: ${this.lastID}`);
+                    
+                    res.json({ 
+                        success: true, 
+                        message: 'Abandoned game saved successfully',
+                        id: this.lastID,
+                        database: 'sqlite'
+                    });
+                }
+            );
+        }
+        
+    } catch (error) {
+        console.error('❌ Server error saving abandoned game:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: 'Failed to save abandoned game'
+        });
+    }
+});
+
+// API endpoint for bulk saving (for syncing local backups)
+app.post('/api/sync-backup-games', saveGameLimiter, async (req, res) => {
+    try {
+        const { games } = req.body;
+        
+        if (!Array.isArray(games) || games.length === 0) {
+            return res.status(400).json({
+                error: 'Invalid request',
+                message: 'Games array is required and must not be empty'
+            });
+        }
+        
+        if (games.length > 50) {
+            return res.status(400).json({
+                error: 'Too many games',
+                message: 'Maximum 50 games can be synced at once'
+            });
+        }
+        
+        console.log(`📦 Syncing ${games.length} backup games from:`, req.ip);
+        
+        const sanitizedGames = games.map(game => {
+            const sanitized = sanitizeGameData(game);
+            sanitized.created_at = new Date().toISOString();
+            return sanitized;
+        });
+        
+        if (supabase) {
+            const { data, error } = await supabase
+                .from('game_results')
+                .upsert(sanitizedGames, { 
+                    onConflict: 'session_id',
+                    ignoreDuplicates: true 
+                })
+                .select();
+            
+            if (error) {
+                console.error('❌ Supabase error syncing backup games:', error);
+                return res.status(500).json({
+                    error: 'Failed to sync backup games',
+                    message: 'Database error occurred'
+                });
+            }
+            
+            console.log(`✅ Successfully synced ${data?.length || 0} games to Supabase`);
+            
+            res.status(200).json({
+                success: true,
+                message: `Successfully synced ${data?.length || 0} games`,
+                synced_count: data?.length || 0,
+                requested_count: games.length,
+                database: 'supabase'
+            });
+        } else {
+            // Fallback bulk insert to SQLite
+            let syncedCount = 0;
+            
+            for (const game of sanitizedGames) {
+                try {
+                    await new Promise((resolve, reject) => {
+                        db.run(
+                            'INSERT OR IGNORE INTO games (code_length, total_guesses, won, duration_seconds, user_id, session_id) VALUES (?, ?, ?, ?, ?, ?)',
+                            [game.difficulty, game.attempts, game.completed ? 1 : 0, game.time_taken, game.user_id, game.session_id],
+                            function(err) {
+                                if (err) reject(err);
+                                else {
+                                    if (this.changes > 0) syncedCount++;
+                                    resolve();
+                                }
+                            }
+                        );
+                    });
+                } catch (err) {
+                    console.error('Error syncing game to SQLite:', err);
+                }
+            }
+            
+            console.log(`✅ Successfully synced ${syncedCount} games to SQLite`);
+            
+            res.status(200).json({
+                success: true,
+                message: `Successfully synced ${syncedCount} games`,
+                synced_count: syncedCount,
+                requested_count: games.length,
+                database: 'sqlite'
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Server error syncing backup games:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: 'Failed to sync backup games'
+        });
+    }
+});
+
+// Health check endpoint (enhanced)
 app.get('/api/health', (req, res) => {
   const envVars = {
     hasSupabaseUrl: !!process.env.SUPABASE_URL || !!process.env.VITE_SUPABASE_URL,
     hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY || !!process.env.VITE_SUPABASE_ANON_KEY,
+    supabaseConnected: !!supabase,
     nodeEnv: process.env.NODE_ENV || 'development',
     port: PORT
   };
@@ -204,14 +574,22 @@ app.get('/api/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    database: 'connected',
+    databases: {
+      sqlite: 'connected',
+      supabase: supabase ? 'connected' : 'not available'
+    },
+    features: {
+      universalSaving: true,
+      guestMode: true,
+      fallbackDatabase: true
+    },
     uptime: process.uptime(),
     domain: process.env.NODE_ENV === 'production' ? 'lytic.co.uk' : 'localhost',
     config: envVars
   });
 });
 
-// Input validation middleware
+// Input validation middleware (keeping your existing one)
 const validateGameInput = (req, res, next) => {
   const { codeLength, totalGuesses, duration } = req.body;
   
@@ -230,7 +608,7 @@ const validateGameInput = (req, res, next) => {
   next();
 };
 
-// Enhanced Game API Routes
+// Enhanced Game API Routes (keeping your existing ones)
 app.post('/api/game/start', apiLimiter, validateGameInput, (req, res) => {
     const { codeLength, userId } = req.body;
     const sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -386,4 +764,11 @@ app.listen(PORT, () => {
     console.log(`📡 Config API: http://localhost:${PORT}/api/config`);
     console.log(`💊 Health check: http://localhost:${PORT}/api/health`);
     console.log(`📄 .env loaded from: ${path.join(__dirname, '../.env')}`);
+    console.log(`💾 Universal saving endpoints:`);
+    console.log(`   📥 POST /api/save-game`);
+    console.log(`   📥 POST /api/save-abandoned-game`);
+    console.log(`   📦 POST /api/sync-backup-games`);
+    console.log(`🗄️ Database status:`);
+    console.log(`   📊 SQLite: Connected (fallback)`);
+    console.log(`   🔗 Supabase: ${supabase ? 'Connected (primary)' : 'Not available'}`);
 });

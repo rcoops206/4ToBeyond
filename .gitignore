@@ -1,4 +1,4 @@
-.env  
+.env   
 
 # Environment variables
 .env
@@ -33,7 +33,4 @@ build/
 Thumbs.db
 
 # Vercel
-.vercel.env
-.env.local
-.env.*.local
-4ToBeyond.git.bfg-report/
+.vercel

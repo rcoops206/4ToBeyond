@@ -1,4 +1,4 @@
-.env 
+.env  
 
 # Environment variables
 .env
@@ -33,4 +33,6 @@ build/
 Thumbs.db
 
 # Vercel
-.vercel
+.vercel.env
+.env.local
+.env.*.local

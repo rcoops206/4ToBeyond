@@ -767,6 +767,126 @@
             box-shadow: 0 8px 25px rgba(107, 114, 128, 0.4);
         }
 
+        /* Modern Confirmation Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Modal Container */
+        .modal-overlay .modal {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            min-width: 400px;
+            max-width: 500px;
+            margin: 20px;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+            padding: 0;
+            display: block;
+            position: relative;
+            inset: auto;
+        }
+
+        .modal-overlay.show .modal {
+            transform: scale(1);
+        }
+
+        /* Modal Header */
+        .modal-header {
+            padding: 32px 32px 24px;
+            text-align: center;
+        }
+
+        .modal-overlay .modal-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 28px;
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+
+        .modal-overlay .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+
+        .modal-message {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
+
+        /* Modal Footer */
+        .modal-footer {
+            padding: 0 32px 32px;
+            display: flex;
+            gap: 16px;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 100px;
+            font-family: inherit;
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+
         /* Entrance animations */
         .fade-in {
             animation: fadeInUp 0.8s ease-out;
@@ -799,6 +919,19 @@
         @media (max-width: 640px) {
             .game-card:hover:not(.disabled) {
                 transform: translateY(-4px) scale(1.01);
+            }
+
+            .modal-overlay .modal {
+                min-width: 320px;
+                margin: 20px;
+            }
+            
+            .modal-footer {
+                flex-direction: column-reverse;
+            }
+            
+            .btn {
+                width: 100%;
             }
         }
     </style>
@@ -926,6 +1059,21 @@
                 <h3 class="modal-title" id="modalTitle">Epic Feature Incoming</h3>
                 <p class="modal-text" id="modalText">This groundbreaking feature is being forged in our labs.</p>
                 <button class="modal-button" onclick="secureHub.hideComingSoon()">Understood</button>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div class="modal-overlay" id="confirmModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <div class="modal-icon">⚠️</div>
+                    <h3 class="modal-title">Confirm Action</h3>
+                    <p class="modal-message">Are you sure?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-cancel" onclick="secureHub.closeModal(false)">Cancel</button>
+                    <button class="btn btn-confirm" onclick="secureHub.closeModal(true)">Confirm</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1189,11 +1337,71 @@
                 this.toggleProfileDropdown();
             }
 
+            // Modern modal confirmation function
+            showSecureConfirm(message, title = 'Confirm Action', icon = '⚠️') {
+                return new Promise((resolve) => {
+                    const modal = document.getElementById('confirmModal');
+                    if (!modal) {
+                        // Fallback to browser confirm if modal not found
+                        resolve(confirm(this.sanitizeDisplayName(message)));
+                        return;
+                    }
+                    
+                    const titleEl = modal.querySelector('.modal-title');
+                    const messageEl = modal.querySelector('.modal-message');
+                    const iconEl = modal.querySelector('.modal-icon');
+                    
+                    // Update content with sanitized data
+                    if (titleEl) titleEl.textContent = this.sanitizeDisplayName(title);
+                    if (messageEl) messageEl.textContent = this.sanitizeDisplayName(message);
+                    if (iconEl) iconEl.textContent = icon;
+                    
+                    // Show modal
+                    modal.classList.add('show');
+                    
+                    // Store resolve function for later use
+                    modal._resolve = resolve;
+                    
+                    // Focus the confirm button
+                    const confirmBtn = modal.querySelector('.btn-confirm');
+                    if (confirmBtn) confirmBtn.focus();
+                    
+                    // Handle escape key
+                    const handleEscape = (e) => {
+                        if (e.key === 'Escape') {
+                            this.closeModal(false);
+                            document.removeEventListener('keydown', handleEscape);
+                        }
+                    };
+                    document.addEventListener('keydown', handleEscape);
+                });
+            }
+
+            // Close modal function
+            closeModal(result) {
+                const modal = document.getElementById('confirmModal');
+                if (!modal) return;
+                
+                modal.classList.remove('show');
+                
+                // Call resolve if it exists
+                if (modal._resolve) {
+                    modal._resolve(result);
+                    modal._resolve = null;
+                }
+            }
+
             // Enhanced Sign Out Function with Proper Session Management
             async signOut() {
                 if (this.isSigningOut || this.isProcessing) return;
                 
-                if (!this.showSecureConfirm('Are you sure you want to sign out?')) {
+                const confirmed = await this.showSecureConfirm(
+                    'Are you sure you want to sign out? You\'ll need to log in again to access your account.',
+                    'Sign Out',
+                    '🚪'
+                );
+
+                if (!confirmed) {
                     this.toggleProfileDropdown();
                     return;
                 }
@@ -1295,7 +1503,7 @@
             }
 
             // Game Functions with security
-            playGame(mode) {
+            async playGame(mode) {
                 if (this.isProcessing) return;
                 
                 // Validate mode parameter
@@ -1309,7 +1517,11 @@
                 
                 if (this.isGuestMode) {
                     // Optional: Show a message encouraging sign up
-                    const shouldContinue = this.showSecureConfirm('Playing as guest. Sign in to save your progress and compete on leaderboards. Continue anyway?');
+                    const shouldContinue = await this.showSecureConfirm(
+                        'Playing as guest. Sign in to save your progress and compete on leaderboards. Continue anyway?',
+                        'Continue as Guest?',
+                        '👤'
+                    );
                     
                     this.setGameCardProcessing('soloGameCard', false);
                     
@@ -1369,12 +1581,6 @@
                 // In production, you might want to use a custom modal instead of alert
                 const sanitizedMessage = this.sanitizeDisplayName(message);
                 alert(sanitizedMessage);
-            }
-
-            showSecureConfirm(message) {
-                // In production, you might want to use a custom modal instead of confirm
-                const sanitizedMessage = this.sanitizeDisplayName(message);
-                return confirm(sanitizedMessage);
             }
 
             // Security monitoring
@@ -1516,6 +1722,16 @@
                 });
             }
 
+            // Close confirmation modal when clicking overlay
+            const confirmModal = document.getElementById('confirmModal');
+            if (confirmModal) {
+                confirmModal.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('modal-overlay')) {
+                        secureHub.closeModal(false);
+                    }
+                });
+            }
+
             // Close profile dropdown when clicking outside
             document.addEventListener('click', (e) => {
                 const profileContainer = document.querySelector('.profile-container');
@@ -1639,4 +1855,4 @@
         }
     </script>
 </body>
-</html>
+</html> 

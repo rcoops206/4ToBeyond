@@ -1706,7 +1706,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 15px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             box-shadow: 
                 0 8px 32px rgba(0, 0, 0, 0.3),
                 inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -1717,6 +1717,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex: 1;
         }
         
         label {
@@ -1821,7 +1822,7 @@
             justify-content: center;
             align-items: center;
             margin-bottom: 20px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
         
         .guess-input {
@@ -2466,19 +2467,22 @@
         }
         
         @media (max-width: 600px) {
-            .game-setup {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .setup-group {
-                justify-content: space-between;
-            }
-            
-            .guess-container {
-                flex-direction: column;
-            }
-            
+    .game-setup {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 15px;
+    }
+    
+    .setup-group {
+        justify-content: center;
+        min-width: fit-content;
+    }
+    
+    .guess-container {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
             .guess-input {
                 width: 100%;
                 font-size: 18px;

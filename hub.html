@@ -1396,7 +1396,7 @@
                 if (this.isSigningOut || this.isProcessing) return;
                 
                 const confirmed = await this.showSecureConfirm(
-                    'Are you sure you want to sign out? You\'ll need to log in again to access your account.',
+                    'Are you sure you want to sign out? ',
                     'Sign Out',
                     '🚪'
                 );
@@ -1518,7 +1518,6 @@
                 if (this.isGuestMode) {
                     // Optional: Show a message encouraging sign up
                     const shouldContinue = await this.showSecureConfirm(
-                        'Playing as guest. Sign in to save your progress and compete on leaderboards. Continue anyway?',
                         'Continue as Guest?',
                         '👤'
                     );

@@ -1,4 +1,1129 @@
-<!DOCTYPE html>
+<tbody id="recentGamesTable">
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="error-state" style="display: none;">
+                <div class="error-icon">⚠️</div>
+                <h3>Unable to Load Dashboard</h3>
+                <p>Please check your connection and try again.</p>
+                <button class="btn btn-primary" onclick="loadDashboard()">Retry</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== ENHANCED UNIVERSAL SAVING SYSTEM =====
+        let supabase = null;
+        let appConfig = null;
+        let currentUser = null;
+        let isSigningOut = false;
+        let isGuestMode = false;
+
+        // Game variables
+        let secretCode = [];
+        let turnCount = 0;
+        let gameWon = false;
+        let codeLength = 4;
+        let eliminationState = {};
+        let gameStartTime = null;
+        let gameEndTime = null;
+        let currentGameResult = null;
+
+        // Enhanced game variables with tracking
+        let gameSession = {
+            sessionId: null,
+            startTime: null,
+            endTime: null,
+            guessHistory: [],
+            deviceInfo: null
+        };
+
+        // Rate limiting for guess submissions
+        let lastGuessTime = 0;
+        const GUESS_COOLDOWN = 500;
+
+        // Modal System
+        let modalResolvers = {};
+
+        // Initialize session tracking
+        function initializeGameSession() {
+            gameSession.sessionId = generateSessionId();
+            gameSession.deviceInfo = getDeviceInfo();
+            console.log('🎮 Game session initialized:', gameSession.sessionId);
+        }
+
+        // Generate unique session ID
+        function generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Get device/browser information (anonymous)
+        function getDeviceInfo() {
+            return {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                screenWidth: screen.width,
+                screenHeight: screen.height,
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        // Universal modal function
+        function showModal(modalId, customData = {}) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById(modalId);
+                if (!modal) {
+                    console.error(`Modal ${modalId} not found`);
+                    resolve(false);
+                    return;
+                }
+
+                // Store resolver for this modal
+                modalResolvers[modalId] = resolve;
+
+                // Custom data handling for specific modals
+                if (modalId === 'guestSignUpModal' && customData.gameResult) {
+                    populateGameStats(customData.gameResult);
+                }
+
+                // Show modal
+                modal.classList.add('show');
+
+                // Focus the confirm button
+                const confirmBtn = modal.querySelector('.btn-confirm');
+                if (confirmBtn) confirmBtn.focus();
+
+                // Handle escape key
+                const handleEscape = (e) => {
+                    if (e.key === 'Escape') {
+                        closeModal(modalId.replace('Modal', ''), false);
+                        document.removeEventListener('keydown', handleEscape);
+                    }
+                };
+                document.addEventListener('keydown', handleEscape);
+            });
+        }
+
+        // Universal close modal function
+        function closeModal(modalType, result) {
+            const modalId = modalType + 'Modal';
+            const modal = document.getElementById(modalId);
+            
+            if (!modal) return;
+            
+            modal.classList.remove('show');
+            
+            // Call resolver if it exists
+            if (modalResolvers[modalId]) {
+                modalResolvers[modalId](result);
+                delete modalResolvers[modalId];
+            }
+        }
+
+        // Populate game stats for guest sign up modal
+        function populateGameStats(gameResult) {
+            const statsDiv = document.getElementById('modalGameStats');
+            if (!statsDiv || !gameResult) return;
+
+            const timeString = gameResult.timeInSeconds >= 60 ? 
+                `${Math.floor(gameResult.timeInSeconds / 60)}m ${gameResult.timeInSeconds % 60}s` :
+                `${gameResult.timeInSeconds}s`;
+
+            statsDiv.innerHTML = `
+                <div><span>Score:</span><span>${gameResult.score.toLocaleString()}</span></div>
+                <div><span>Time:</span><span>${timeString}</span></div>
+                <div><span>Attempts:</span><span>${gameResult.attempts}</span></div>
+            `;
+        }
+
+        // Secure App Initialization
+        async function initializeApp() {
+            try {
+                console.log('🔧 Loading secure configuration...');
+                
+                // Load config from backend
+                const response = await fetch('/api/config');
+                if (!response.ok) {
+                    throw new Error(`Config load failed: ${response.status}`);
+                }
+                
+                appConfig = await response.json();
+                console.log(`✅ Config loaded: ${appConfig.environment} mode`);
+                
+                // Initialize Supabase with server-provided config
+                supabase = window.supabase.createClient(
+                    appConfig.supabase.url,
+                    appConfig.supabase.anonKey
+                );
+                
+                console.log('✅ Supabase initialized securely');
+                
+                // Initialize game session tracking
+                initializeGameSession();
+                
+                // Load user data
+                await loadUserData();
+                
+                // Background sync of any pending backup data
+                setTimeout(async () => {
+                    if (navigator.onLine) {
+                        await syncLocalBackup();
+                    }
+                }, 2000);
+                
+                console.log('🎮 Lytic initialized successfully with universal saving!');
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize app:', error);
+                showInitializationError(error);
+            }
+        }
+
+        function showInitializationError(error) {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: white;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">🔧</div>
+                        <h2>Setting up secure connection...</h2>
+                        <p style="margin: 1rem 0; opacity: 0.7;">
+                            Please wait while we establish a secure connection to our servers.
+                        </p>
+                        <button onclick="location.reload()" 
+                                style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Retry Connection
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // Input validation and sanitization
+        function sanitizeInput(input) {
+            if (typeof input !== 'string') return '';
+            return input.replace(/[^0-9]/g, '').slice(0, 7);
+        }
+
+        function validateGuess(input) {
+            const sanitized = sanitizeInput(input);
+            
+            if (sanitized.length !== codeLength) {
+                return { valid: false, message: `Please enter exactly ${codeLength} digits.` };
+            }
+            
+            if (!/^\d+$/.test(sanitized)) {
+                return { valid: false, message: 'Please enter only numbers.' };
+            }
+            
+            return { valid: true, value: sanitized };
+        }
+
+        // Universal game result saving function
+        async function saveGameResult() {
+            if (!currentGameResult) {
+                console.warn('Cannot save result - no game result available');
+                return;
+            }
+            
+            console.log('💾 Starting universal save process...');
+            
+            // Prepare comprehensive game data
+            const gameData = {
+                user_id: currentUser ? currentUser.id : null,
+                session_id: gameSession.sessionId,
+                difficulty: currentGameResult.difficulty,
+                attempts: currentGameResult.attempts,
+                time_taken: currentGameResult.timeInSeconds,
+                completed: currentGameResult.completed,
+                score: currentGameResult.score || 0,
+                secret_code: currentGameResult.secretCode,
+                final_guess: currentGameResult.finalGuess,
+                is_guest: isGuestMode || !currentUser,
+                device_info: gameSession.deviceInfo,
+                guess_history: gameSession.guessHistory,
+                game_started_at: new Date(gameSession.startTime).toISOString(),
+                game_ended_at: new Date(gameSession.endTime).toISOString(),
+                created_at: new Date().toISOString(),
+                total_game_time: currentGameResult.timeInSeconds,
+                average_time_per_guess: currentGameResult.attempts > 0 ? 
+                    currentGameResult.timeInSeconds / currentGameResult.attempts : 0,
+                win_rate_this_session: calculateSessionWinRate(),
+                browser_language: navigator.language,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                status: currentGameResult.completed ? 'completed' : 'abandoned',
+                abandoned: false
+            };
+            
+            // Try multiple save methods
+            const saveSuccess = await attemptSave(gameData);
+            
+            if (saveSuccess) {
+                console.log('✅ Game result saved successfully');
+                updateLocalStatsCache(gameData);
+            } else {
+                console.error('❌ Save failed, saving to local backup');
+                saveToLocalStorage(gameData);
+            }
+        }
+
+        // Attempt to save using multiple methods
+        async function attemptSave(gameData) {
+            const methods = [
+                () => saveViaSupabase(gameData),
+                () => saveViaBackendAPI(gameData)
+            ];
+            
+            for (const method of methods) {
+                try {
+                    console.log(`🔄 Attempting save method ${methods.indexOf(method) + 1}...`);
+                    const result = await method();
+                    if (result) {
+                        console.log(`✅ Save successful via method ${methods.indexOf(method) + 1}`);
+                        return true;
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ Save method ${methods.indexOf(method) + 1} failed:`, error.message);
+                }
+            }
+            return false;
+        }
+
+        // Method 1: Direct Supabase save
+        async function saveViaSupabase(gameData) {
+            if (!supabase) throw new Error('Supabase not available');
+            
+            const { data, error } = await supabase
+                .from('game_results')
+                .insert([gameData])
+                .select();
+            
+            if (error) throw error;
+            return data;
+        }
+
+        // Method 2: Backend API save
+        async function saveViaBackendAPI(gameData) {
+            const response = await fetch('/api/save-game', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(gameData)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'API save failed');
+            }
+            
+            return await response.json();
+        }
+
+        // Backup save to local storage
+        function saveToLocalStorage(gameData) {
+            try {
+                const backupKey = 'lytic_backup_results';
+                const existing = JSON.parse(localStorage.getItem(backupKey) || '[]');
+                
+                existing.push({
+                    ...gameData,
+                    backup_timestamp: Date.now()
+                });
+                
+                // Keep only last 10 backup results
+                if (existing.length > 10) {
+                    existing.splice(0, existing.length - 10);
+                }
+                
+                localStorage.setItem(backupKey, JSON.stringify(existing));
+                console.log('📦 Game result saved to local backup');
+                
+                // Schedule retry for later
+                setTimeout(() => {
+                    if (navigator.onLine) syncLocalBackup();
+                }, 30000);
+                
+            } catch (error) {
+                console.error('Failed to save to local storage:', error);
+            }
+        }
+
+        // Sync local backup data
+        async function syncLocalBackup() {
+            if (!supabase) return;
+            
+            try {
+                const backupKey = 'lytic_backup_results';
+                const backupData = JSON.parse(localStorage.getItem(backupKey) || '[]');
+                
+                if (backupData.length === 0) return;
+                
+                console.log(`📤 Syncing ${backupData.length} backup results...`);
+                
+                const response = await fetch('/api/sync-backup-games', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ games: backupData })
+                });
+                
+                if (response.ok) {
+                    localStorage.removeItem(backupKey);
+                    console.log('✅ Backup results synced successfully');
+                }
+                
+            } catch (error) {
+                console.error('Failed to sync local backup:', error);
+            }
+        }
+
+        // Calculate session win rate
+        function calculateSessionWinRate() {
+            const sessionKey = 'lytic_session_' + new Date().toDateString();
+            const sessionStats = JSON.parse(sessionStorage.getItem(sessionKey) || '{"games": 0, "wins": 0}');
+            
+            sessionStats.games++;
+            if (currentGameResult && currentGameResult.completed) {
+                sessionStats.wins++;
+            }
+            
+            sessionStorage.setItem(sessionKey, JSON.stringify(sessionStats));
+            return sessionStats.games > 0 ? (sessionStats.wins / sessionStats.games) * 100 : 0;
+        }
+
+        // Update local stats cache
+        function updateLocalStatsCache(gameData) {
+            try {
+                const cacheKey = currentUser ? `lytic_stats_${currentUser.id}` : 'lytic_guest_stats';
+                const stats = JSON.parse(localStorage.getItem(cacheKey) || '{"totalGames": 0, "totalWins": 0, "totalScore": 0}');
+                
+                stats.totalGames++;
+                if (gameData.completed) {
+                    stats.totalWins++;
+                }
+                stats.totalScore += gameData.score || 0;
+                stats.lastPlayed = Date.now();
+                
+                localStorage.setItem(cacheKey, JSON.stringify(stats));
+            } catch (error) {
+                console.error('Failed to update local stats cache:', error);
+            }
+        }
+
+        // Enhanced submitGuess with detailed tracking and universal saving
+        function submitGuess() {
+            if (gameWon) return;
+            
+            // Rate limiting
+            const now = Date.now();
+            if (now - lastGuessTime < GUESS_COOLDOWN) {
+                console.warn('Rate limit: Please wait before submitting another guess');
+                return;
+            }
+            lastGuessTime = now;
+            
+            const guessInput = document.getElementById('guessInput');
+            const rawGuess = guessInput.value.trim();
+            
+            // Validate and sanitize input
+            const validation = validateGuess(rawGuess);
+            if (!validation.valid) {
+                document.getElementById('feedback').textContent = validation.message;
+                return;
+            }
+            
+            const guess = validation.value;
+            turnCount++;
+            document.getElementById('turnCounter').textContent = turnCount;
+            
+            const guessArray = guess.split('').map(Number);
+            let correctCount = 0;
+            
+            for (let i = 0; i < codeLength; i++) {
+                if (guessArray[i] === secretCode[i]) {
+                    correctCount++;
+                }
+            }
+            
+            // Track this guess in session history
+            const guessData = {
+                turnNumber: turnCount,
+                guess: guess,
+                correctCount: correctCount,
+                timestamp: now,
+                timeSinceStart: now - gameStartTime
+            };
+            gameSession.guessHistory.push(guessData);
+            
+            // Add to history table
+            const historyBody = document.getElementById('historyBody');
+            const row = historyBody.insertRow();
+            row.insertCell(0).textContent = turnCount;
+            row.insertCell(1).textContent = guess;
+            row.insertCell(2).textContent = correctCount;
+            
+            // Update feedback
+            const feedbackEl = document.getElementById('feedback');
+            if (correctCount === codeLength) {
+                gameEndTime = Date.now();
+                gameSession.endTime = gameEndTime;
+                const timeInSeconds = Math.floor((gameEndTime - gameStartTime) / 1000);
+                const score = calculateScore(codeLength, turnCount, timeInSeconds, true);
+                
+                feedbackEl.textContent = `Perfect! All ${correctCount} digits correct!`;
+                feedbackEl.className = 'feedback correct';
+                document.getElementById('winMessage').classList.remove('hidden');
+                gameWon = true;
+                
+                // Prepare comprehensive game result
+                currentGameResult = {
+                    difficulty: codeLength,
+                    attempts: turnCount,
+                    timeInSeconds: timeInSeconds,
+                    completed: true,
+                    score: score,
+                    secretCode: secretCode.join(''),
+                    finalGuess: guess,
+                    sessionData: gameSession
+                };
+                
+                // Save result immediately with universal system
+                setTimeout(async () => {
+                    await saveGameResult();
+                    await handleGameCompletion(currentGameResult);
+                }, 200);
+                
+            } else {
+                feedbackEl.textContent = `${correctCount} out of ${codeLength} digits correct.`;
+                feedbackEl.className = 'feedback';
+            }
+            
+            guessInput.value = '';
+            guessInput.focus();
+        }
+
+        // Handle game completion with modals
+        async function handleGameCompletion(gameResult) {
+            if (currentUser && !isGuestMode) {
+                setTimeout(() => showSaveModal(), 500);
+            } else {
+                // Show guest sign up modal instead of alert
+                const shouldSignIn = await showModal('guestSignUpModal', { gameResult });
+                if (shouldSignIn) {
+                    window.location.href = 'index.html';
+                }
+            }
+        }
+
+        // Enhanced newGame function with session tracking
+        async function newGame() {
+            // Check if there's a game in progress
+            if (turnCount > 0 && !gameWon && gameStartTime) {
+                const confirmed = await showModal('newGameModal');
+                if (!confirmed) {
+                    return; // User cancelled, don't start new game
+                }
+            }
+
+            const selectedLength = parseInt(document.getElementById('codeLength').value);
+            
+            if (selectedLength < 4 || selectedLength > 7) {
+                console.error('Invalid code length selected');
+                return;
+            }
+            
+            codeLength = selectedLength;
+            document.getElementById('guessInput').maxLength = codeLength;
+            
+            secretCode = [];
+            for (let i = 0; i < codeLength; i++) {
+                secretCode.push(Math.floor(Math.random() * 10));
+            }
+            
+            // Reset game state
+            turnCount = 0;
+            gameWon = false;
+            gameStartTime = Date.now();
+            gameEndTime = null;
+            currentGameResult = null;
+            
+            // Initialize session for this game
+            gameSession.startTime = gameStartTime;
+            gameSession.guessHistory = [];
+            
+            // UI updates
+            document.getElementById('turnCounter').textContent = turnCount;
+            document.getElementById('historyBody').innerHTML = '';
+            document.getElementById('feedback').textContent = `Game started! Guess the ${codeLength}-digit code.`;
+            document.getElementById('feedback').className = 'feedback';
+            document.getElementById('winMessage').classList.add('hidden');
+            document.getElementById('guessInput').value = '';
+            document.getElementById('guessInput').focus();
+            
+            initializeEliminationGrid();
+            
+            if (appConfig && appConfig.environment === 'development') {
+                console.log('Secret code:', secretCode.join(''));
+            }
+        }
+
+        // Auto-save on page unload (for incomplete games)
+        window.addEventListener('beforeunload', function() {
+            if (gameStartTime && !gameWon && turnCount > 0) {
+                const abandonedData = {
+                    user_id: currentUser ? currentUser.id : null,
+                    session_id: gameSession.sessionId,
+                    difficulty: codeLength,
+                    attempts: turnCount,
+                    time_taken: Math.floor((Date.now() - gameStartTime) / 1000),
+                    completed: false,
+                    score: 0,
+                    is_guest: isGuestMode || !currentUser,
+                    game_started_at: new Date(gameStartTime).toISOString(),
+                    guess_history: gameSession.guessHistory,
+                    device_info: gameSession.deviceInfo,
+                    abandoned: true,
+                    abandon_reason: 'page_unload',
+                    status: 'abandoned',
+                    created_at: new Date().toISOString()
+                };
+                
+                // Use sendBeacon for reliable sending on page unload
+                if (navigator.sendBeacon) {
+                    const blob = new Blob([JSON.stringify(abandonedData)], { type: 'application/json' });
+                    navigator.sendBeacon('/api/save-abandoned-game', blob);
+                } else {
+                    saveToLocalStorage(abandonedData);
+                }
+            }
+        });
+
+        // Network status handling
+        window.addEventListener('online', syncLocalBackup);
+        window.addEventListener('offline', function() {
+            console.log('🔌 Offline mode - results will be saved locally');
+        });
+
+        // Load and display user data
+        async function loadUserData() {
+            if (!supabase) {
+                console.warn('Supabase not initialized yet');
+                return;
+            }
+            
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const guestParam = urlParams.get('guest');
+                
+                if (guestParam === 'true') {
+                    isGuestMode = true;
+                    currentUser = null;
+                    updateProfileDisplay(null, true);
+                    return;
+                }
+
+                const { data: { user }, error } = await supabase.auth.getUser();
+                
+                if (error) {
+                    console.error('Error getting user:', error);
+                    isGuestMode = true;
+                    updateProfileDisplay(null, true);
+                    return;
+                }
+
+                if (user) {
+                    isGuestMode = false;
+                    currentUser = user;
+                    updateProfileDisplay(user, false);
+                } else {
+                    isGuestMode = true;
+                    updateProfileDisplay(null, true);
+                }
+            } catch (error) {
+                console.error('Failed to load user data:', error);
+                isGuestMode = true;
+                updateProfileDisplay(null, true);
+            }
+        }
+
+        // Update profile display with user information
+        function updateProfileDisplay(user, isGuestMode = false) {
+            const nameElement = document.getElementById('profileName');
+            const emailElement = document.getElementById('profileEmail');
+            const profileMenu = document.getElementById('profileMenu');
+
+            if (user && !isGuestMode) {
+                const displayName = user.user_metadata?.display_name || 
+                                 user.user_metadata?.full_name || 
+                                 user.email?.split('@')[0] || 
+                                 'User';
+                nameElement.textContent = displayName;
+                emailElement.textContent = user.email || 'No email';
+                
+                profileMenu.innerHTML = `
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="goToHub()">
+                            <span class="profile-menu-icon">🏠</span>
+                            <span>Hub</span>
+                        </button>
+                    </li>
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="showDashboard()">
+                            <span class="profile-menu-icon">📊</span>
+                            <span>Dashboard</span>
+                        </button>
+                    </li>
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link danger" id="signOutButton" onclick="signOut()">
+                            <span class="profile-menu-icon">🚪</span>
+                            <span>Sign Out</span>
+                        </button>
+                    </li>
+                `;
+            } else {
+                nameElement.textContent = 'Guest User';
+                emailElement.innerHTML = `
+                    Playing as Guest
+                    <div class="guest-indicator">GUEST MODE</div>
+                `;
+                
+                profileMenu.innerHTML = `
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link" onclick="goToHub()">
+                            <span class="profile-menu-icon">🏠</span>
+                            <span>Hub</span>
+                        </button>
+                    </li>
+                    <li class="profile-menu-item">
+                        <button class="profile-menu-link primary" onclick="signInAsUser()">
+                            <span class="profile-menu-icon">🔑</span>
+                            <span>Sign In</span>
+                        </button>
+                    </li>
+                `;
+            }
+        }
+
+        // Profile Functions
+        function toggleProfileDropdown() {
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        function goToHub() {
+            if (isGuestMode) {
+                window.location.href = 'hub.html?guest=true';
+            } else {
+                window.location.href = 'hub.html';
+            }
+        }
+
+        // Enhanced showDashboard with modal
+        async function showDashboard() {
+            if (isGuestMode) {
+                const shouldSignIn = await showModal('dashboardSignInModal');
+                if (shouldSignIn) {
+                    window.location.href = 'index.html';
+                }
+                toggleProfileDropdown();
+                return;
+            }
+
+            if (!currentUser) {
+                const shouldSignIn = await showModal('dashboardSignInModal');
+                if (shouldSignIn) {
+                    window.location.href = 'index.html';
+                }
+                toggleProfileDropdown();
+                return;
+            }
+
+            document.getElementById('dashboardModal').classList.add('show');
+            await loadDashboard();
+            toggleProfileDropdown();
+        }
+
+        // Enhanced signOut with modal
+        async function signOut() {
+            if (isSigningOut || !supabase) return;
+            
+            const confirmed = await showModal('signOutModal');
+            if (!confirmed) {
+                toggleProfileDropdown();
+                return;
+            }
+
+            isSigningOut = true;
+            
+            try {
+                const { error } = await supabase.auth.signOut({ scope: 'global' });
+                if (error) console.error('Supabase sign out error:', error);
+                
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.replace('index.html');
+            } catch (error) {
+                console.error('Error during sign out:', error);
+                window.location.replace('index.html');
+            } finally {
+                isSigningOut = false;
+            }
+        }
+
+        function signInAsUser() {
+            window.location.href = 'index.html';
+        }
+
+        // Calculate score based on difficulty, attempts, and time
+        function calculateScore(difficulty, attempts, timeInSeconds, completed) {
+            if (!completed) return 0;
+            
+            const baseScore = difficulty * 250;
+            const attemptPenalty = Math.max(0, (attempts - difficulty) * 50);
+            const timePenalty = Math.min(timeInSeconds * 2, 300);
+            const difficultyBonus = difficulty * 100;
+            
+            return Math.max(baseScore - attemptPenalty - timePenalty + difficultyBonus, 100);
+        }
+
+        // Save modal functions
+        function showSaveModal() {
+            if (!currentGameResult) return;
+            
+            const modal = document.getElementById('saveModal');
+            const statsDiv = document.getElementById('saveStats');
+            
+            const timeString = currentGameResult.timeInSeconds >= 60 ? 
+                `${Math.floor(currentGameResult.timeInSeconds / 60)}m ${currentGameResult.timeInSeconds % 60}s` :
+                `${currentGameResult.timeInSeconds}s`;
+            
+            statsDiv.innerHTML = `
+                <div><span>Difficulty:</span><span>${currentGameResult.difficulty} digits</span></div>
+                <div><span>Attempts:</span><span>${currentGameResult.attempts}</span></div>
+                <div><span>Time:</span><span>${timeString}</span></div>
+                <div><span>Your Score:</span><span>${currentGameResult.score.toLocaleString()}</span></div>
+            `;
+            
+            modal.classList.add('show');
+        }
+
+        function hideSaveModal() {
+            document.getElementById('saveModal').classList.remove('show');
+        }
+
+        // Enhanced saveResult with modal
+        async function saveResult() {
+            if (!currentUser || isGuestMode) {
+                const shouldSignIn = await showModal('dashboardSignInModal');
+                if (shouldSignIn) {
+                    window.location.href = 'index.html';
+                }
+                hideSaveModal();
+                return;
+            }
+            
+            hideSaveModal();
+            
+            const playAnother = await showModal('playAnotherModal');
+            if (playAnother) {
+                newGame();
+            }
+        }
+
+        // Enhanced confirmReset with modal
+        async function confirmReset() {
+            if (turnCount > 0 && !gameWon) {
+                const confirmed = await showModal('resetGameModal');
+                if (confirmed) {
+                    newGame();
+                }
+            } else {
+                newGame();
+            }
+        }
+
+        // Initialize elimination grid
+        function initializeEliminationGrid() {
+            const grid = document.getElementById('eliminationGrid');
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `auto repeat(${codeLength}, 1fr)`;
+            
+            eliminationState = {};
+            
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'grid-header';
+            grid.appendChild(emptyCell);
+            
+            for (let pos = 0; pos < codeLength; pos++) {
+                const header = document.createElement('div');
+                header.className = 'grid-header';
+                header.textContent = `P${pos + 1}`;
+                grid.appendChild(header);
+            }
+            
+            for (let digit = 0; digit <= 9; digit++) {
+                const rowHeader = document.createElement('div');
+                rowHeader.className = 'grid-row-header';
+                rowHeader.textContent = digit.toString();
+                grid.appendChild(rowHeader);
+                
+                for (let pos = 0; pos < codeLength; pos++) {
+                    const cell = document.createElement('button');
+                    cell.className = 'grid-cell';
+                    cell.dataset.digit = digit;
+                    cell.dataset.position = pos;
+                    cell.onclick = () => toggleCell(digit, pos);
+                    grid.appendChild(cell);
+                    
+                    eliminationState[`${digit}-${pos}`] = 'unknown';
+                }
+            }
+        }
+        
+        function toggleCell(digit, position) {
+            const key = `${digit}-${position}`;
+            const cell = document.querySelector(`[data-digit="${digit}"][data-position="${position}"]`);
+            
+            if (eliminationState[key] === 'unknown') {
+                eliminationState[key] = 'no';
+                cell.className = 'grid-cell no';
+                cell.textContent = '✗';
+            } else if (eliminationState[key] === 'no') {
+                eliminationState[key] = 'yes';
+                cell.className = 'grid-cell yes';
+                cell.textContent = '✓';
+            } else {
+                eliminationState[key] = 'unknown';
+                cell.className = 'grid-cell';
+                cell.textContent = '';
+            }
+        }
+
+        // Dashboard Functions
+        function hideDashboard() {
+            document.getElementById('dashboardModal').classList.remove('show');
+        }
+
+        async function loadDashboard() {
+            const loadingState = document.getElementById('loadingState');
+            const dashboardData = document.getElementById('dashboardData');
+            const errorState = document.getElementById('errorState');
+
+            // Show loading state
+            loadingState.style.display = 'block';
+            dashboardData.style.display = 'none';
+            errorState.style.display = 'none';
+
+            try {
+                if (!currentUser) {
+                    throw new Error('User not authenticated');
+                }
+
+                // Fetch user's game results with security check
+                const { data: gameResults, error } = await supabase
+                    .from('game_results')
+                    .select('*')
+                    .eq('user_id', currentUser.id) // Security: Only fetch current user's data
+                    .order('created_at', { ascending: false })
+                    .limit(50); // Limit for performance
+
+                if (error) {
+                    console.error('Database error:', error);
+                    throw new Error('Failed to fetch game data');
+                }
+
+                // Calculate and display statistics
+                const stats = calculateUserStats(gameResults || []);
+                updateStatsDisplay(stats);
+
+                // Update difficulty breakdown
+                updateDifficultyBreakdown(gameResults || []);
+
+                // Update recent games table (last 10)
+                updateRecentGamesTable((gameResults || []).slice(0, 10));
+
+                // Show dashboard content
+                loadingState.style.display = 'none';
+                dashboardData.style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                
+                // Show error state
+                loadingState.style.display = 'none';
+                errorState.style.display = 'block';
+            }
+        }
+
+        function calculateUserStats(gameResults) {
+            const totalGames = gameResults.length;
+            const completedGames = gameResults.filter(game => game.completed);
+            const gamesWon = completedGames.length;
+            const winRate = totalGames > 0 ? Math.round((gamesWon / totalGames) * 100) : 0;
+            const bestScore = gameResults.length > 0 ? Math.max(...gameResults.map(g => g.score || 0)) : 0;
+            
+            const avgAttempts = completedGames.length > 0 ? 
+                (completedGames.reduce((sum, game) => sum + game.attempts, 0) / completedGames.length).toFixed(1) : 0;
+            const avgTime = completedGames.length > 0 ? 
+                Math.round(completedGames.reduce((sum, game) => sum + game.time_taken, 0) / completedGames.length) : 0;
+
+            return { totalGames, gamesWon, winRate, bestScore, avgAttempts, avgTime };
+        }
+
+        function updateStatsDisplay(stats) {
+            document.getElementById('totalGames').textContent = stats.totalGames;
+            document.getElementById('gamesWon').textContent = stats.gamesWon;
+            document.getElementById('winRate').textContent = stats.winRate + '%';
+            document.getElementById('bestScore').textContent = stats.bestScore.toLocaleString();
+            document.getElementById('avgAttempts').textContent = stats.avgAttempts;
+            document.getElementById('avgTime').textContent = stats.avgTime + 's';
+        }
+
+        function updateDifficultyBreakdown(gameResults) {
+            const breakdown = {};
+            
+            // Initialize breakdown for all difficulties
+            for (let i = 4; i <= 7; i++) {
+                breakdown[i] = { games: 0, won: 0, attempts: [], scores: [] };
+            }
+
+            // Process game results
+            gameResults.forEach(game => {
+                const difficulty = game.difficulty;
+                if (breakdown[difficulty]) {
+                    breakdown[difficulty].games++;
+                    if (game.completed) {
+                        breakdown[difficulty].won++;
+                        breakdown[difficulty].attempts.push(game.attempts);
+                        breakdown[difficulty].scores.push(game.score || 0);
+                    }
+                }
+            });
+
+            const container = document.getElementById('difficultyBreakdown');
+            container.innerHTML = '';
+
+            let hasData = false;
+
+            for (let level = 4; level <= 7; level++) {
+                const data = breakdown[level];
+                if (data.games > 0) {
+                    hasData = true;
+                }
+
+                const avgAttempts = data.attempts.length > 0 ? 
+                    (data.attempts.reduce((sum, a) => sum + a, 0) / data.attempts.length).toFixed(1) : '0';
+                const bestScore = data.scores.length > 0 ? Math.max(...data.scores) : 0;
+                const winRate = data.games > 0 ? Math.round((data.won / data.games) * 100) : 0;
+
+                const item = document.createElement('div');
+                item.className = `difficulty-item level-${level}`;
+                item.innerHTML = `
+                    <div class="difficulty-info">
+                        <div class="difficulty-name">${level} Digits</div>
+                        <div class="difficulty-stats">${data.games} games • ${winRate}% win rate • ${avgAttempts} avg attempts</div>
+                    </div>
+                    <div class="difficulty-score">${bestScore.toLocaleString()}</div>
+                `;
+                container.appendChild(item);
+            }
+
+            if (!hasData) {
+                container.innerHTML = '<div class="no-data">No games played yet. Start playing to see your performance analytics!</div>';
+            }
+        }
+
+        function updateRecentGamesTable(games) {
+            const tbody = document.getElementById('recentGamesTable');
+            tbody.innerHTML = '';
+
+            if (games.length === 0) {
+                const row = tbody.insertRow();
+                row.innerHTML = '<td colspan="6" class="no-data">No games played yet</td>';
+                return;
+            }
+
+            games.forEach(game => {
+                const row = tbody.insertRow();
+                const date = new Date(game.created_at).toLocaleDateString();
+                const time = game.time_taken ? 
+                    `${Math.floor(game.time_taken / 60)}:${(game.time_taken % 60).toString().padStart(2, '0')}` : '--';
+                const status = game.completed ? 'Won' : 'Lost';
+                const statusClass = game.completed ? 'status-won' : 'status-lost';
+
+                row.innerHTML = `
+                    <td>${date}</td>
+                    <td>${game.difficulty} digits</td>
+                    <td>${game.attempts}</td>
+                    <td>${time}</td>
+                    <td>${(game.score || 0).toLocaleString()}</td>
+                    <td><span class="${statusClass}">${status}</span></td>
+                `;
+            });
+        }
+
+        // Event Listeners
+        document.addEventListener('click', function(e) {
+            const profileContainer = document.querySelector('.profile-container');
+            const dropdown = document.getElementById('profileDropdown');
+            
+            if (profileContainer && !profileContainer.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+
+            // Close modals when clicking overlay
+            if (e.target.classList.contains('modal-overlay')) {
+                const modalId = e.target.id;
+                const modalType = modalId.replace('Modal', '');
+                closeModal(modalType, false);
+            }
+
+            // Close dashboard when clicking overlay
+            const dashboardModal = document.getElementById('dashboardModal');
+            if (e.target === dashboardModal) {
+                hideDashboard();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                // Close profile dropdown
+                document.getElementById('profileDropdown').classList.remove('show');
+                
+                // Close dashboard
+                hideDashboard();
+                
+                // Close any visible modal
+                const visibleModal = document.querySelector('.modal-overlay.show');
+                if (visibleModal) {
+                    const modalType = visibleModal.id.replace('Modal', '');
+                    closeModal(modalType, false);
+                }
+            }
+        });
+
+        // Enter key support
+        document.addEventListener('DOMContentLoaded', function() {
+            const guessInput = document.getElementById('guessInput');
+            if (guessInput) {
+                guessInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        submitGuess();
+                    }
+                });
+            }
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', initializeApp);
+
+        console.log('🎮 Enhanced universal saving system with modals loaded and ready!');
+    </script>
+</body>
+</html><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -294,7 +1419,244 @@
             padding-top: 0.5rem;
             margin-top: 0.5rem;
         }
-        
+
+        /* Modern Confirmation Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Modal Container */
+        .modal-overlay .modal {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 24px;
+            min-width: 400px;
+            max-width: 500px;
+            margin: 20px;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+            padding: 0;
+            display: block;
+            position: relative;
+            inset: auto;
+        }
+
+        .modal-overlay.show .modal {
+            transform: scale(1);
+        }
+
+        /* Modal Header */
+        .modal-header {
+            padding: 32px 32px 24px;
+            text-align: center;
+        }
+
+        .modal-overlay .modal-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 28px;
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Special icon colors for different modal types */
+        #signOutModal .modal-icon {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+
+        #resetGameModal .modal-icon {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+        }
+
+        #guestContinueModal .modal-icon {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        #dashboardSignInModal .modal-icon {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+
+        #guestSignUpModal .modal-icon {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+        }
+
+        #playAnotherModal .modal-icon {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+        }
+
+        #newGameModal .modal-icon {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+            box-shadow: 0 8px 25px rgba(6, 182, 212, 0.4);
+        }
+
+        .modal-overlay .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 12px;
+        }
+
+        .modal-message {
+            font-size: 16px;
+            color: rgba(226, 232, 240, 0.8);
+            line-height: 1.6;
+        }
+
+        /* Modal Stats for Guest Sign Up Modal */
+        .modal-stats {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+            color: #cbd5e1;
+            text-align: left;
+        }
+
+        .modal-stats div {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .modal-stats div:last-child {
+            margin-bottom: 0;
+            font-weight: 700;
+            color: #60a5fa;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        /* Modal Footer */
+        .modal-footer {
+            padding: 0 32px 32px;
+            display: flex;
+            gap: 16px;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 100px;
+            font-family: inherit;
+        }
+
+        .btn-cancel {
+            background: rgba(148, 163, 184, 0.2);
+            color: rgba(226, 232, 240, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .btn-cancel:hover {
+            background: rgba(148, 163, 184, 0.3);
+            color: #e2e8f0;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Special button colors for different actions */
+        #signOutModal .btn-confirm {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        #signOutModal .btn-confirm:hover {
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+
+        #resetGameModal .btn-confirm {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        #resetGameModal .btn-confirm:hover {
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+        }
+
+        #guestContinueModal .btn-confirm {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        #guestContinueModal .btn-confirm:hover {
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        #guestSignUpModal .btn-confirm {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+        }
+
+        #guestSignUpModal .btn-confirm:hover {
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+        }
+
+        #playAnotherModal .btn-confirm {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        #playAnotherModal .btn-confirm:hover {
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+        }
+
+        #newGameModal .btn-confirm {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+        }
+
+        #newGameModal .btn-confirm:hover {
+            box-shadow: 0 8px 25px rgba(6, 182, 212, 0.4);
+        }
+
         .container {
             max-width: 500px;
             width: 100%;
@@ -766,7 +2128,281 @@
         .reset-container {
             text-align: center;
         }
+
+        /* Dashboard Modal Styles */
+        .dashboard-modal {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .dashboard-modal.show {
+            display: flex;
+        }
+
+        .dashboard-content {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 24px;
+            padding: 2rem;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+            position: relative;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .dashboard-title {
+            font-size: 1.875rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .close-button {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .close-button:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: scale(1.1);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(96, 165, 250, 0.5);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .stat-icon {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #60a5fa;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Performance Section */
+        .performance-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .chart-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .chart-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .difficulty-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .difficulty-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 12px;
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .difficulty-item:hover {
+            transform: translateX(4px);
+        }
+
+        .difficulty-item.level-4 { border-left-color: #10b981; }
+        .difficulty-item.level-5 { border-left-color: #f59e0b; }
+        .difficulty-item.level-6 { border-left-color: #ef4444; }
+        .difficulty-item.level-7 { border-left-color: #8b5cf6; }
+
+        .difficulty-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .difficulty-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .difficulty-stats {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .difficulty-score {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #60a5fa;
+        }
+
+        /* Recent Games */
+        .recent-games {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        .games-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .games-table th {
+            background: rgba(15, 23, 42, 0.8);
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .games-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .games-table tbody tr:hover {
+            background: rgba(96, 165, 250, 0.1);
+        }
+
+        .status-won {
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        .status-lost {
+            color: #f87171;
+            font-weight: 600;
+        }
+
+        /* Loading State */
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Error State */
+        .error-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .error-state h3 {
+            margin-bottom: 0.5rem;
+            color: #f87171;
+        }
+
+        .error-state p {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 1.5rem;
+        }
+
+        /* No Data State */
+        .no-data {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
         
+        /* Responsive adjustments */
         @media (max-width: 768px) {
             .game-grid {
                 grid-template-columns: 1fr;
@@ -780,6 +2416,52 @@
             
             .guess-input::placeholder {
                 font-size: 12px;
+            }
+
+            .modal-overlay .modal {
+                min-width: 320px;
+                margin: 20px;
+            }
+            
+            .modal-footer {
+                flex-direction: column-reverse;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+
+            .dashboard-content {
+                margin: 0.5rem;
+                padding: 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .games-table {
+                font-size: 0.8rem;
+            }
+
+            .games-table th,
+            .games-table td {
+                padding: 0.5rem;
+            }
+
+            .difficulty-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
             }
         }
         
@@ -813,6 +2495,10 @@
             .grid-cell {
                 min-height: 28px;
                 padding: 6px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
             }
         }
         
@@ -857,10 +2543,119 @@
         </div>
     </div>
 
+    <!-- Modern Confirmation Modals -->
+    <!-- Sign Out Confirmation Modal -->
+    <div class="modal-overlay" id="signOutModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-icon">🚪</div>
+                <h3 class="modal-title">Sign Out</h3>
+                <p class="modal-message">Are you sure you want to sign out? You'll need to log in again to access your account.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeModal('signOut', false)">Cancel</button>
+                <button class="btn btn-confirm" onclick="closeModal('signOut', true)">Sign Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Game Confirmation Modal -->
+    <div class="modal-overlay" id="resetGameModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-icon">🔄</div>
+                <h3 class="modal-title">Reset Game</h3>
+                <p class="modal-message">Are you sure you want to reset the current game? All progress will be lost.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeModal('resetGame', false)">Cancel</button>
+                <button class="btn btn-confirm" onclick="closeModal('resetGame', true)">Reset Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guest Continue Confirmation Modal -->
+    <div class="modal-overlay" id="guestContinueModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-icon">👤</div>
+                <h3 class="modal-title">Continue as Guest?</h3>
+                <p class="modal-message">Playing as guest. Sign in to save your progress and compete on leaderboards. Continue anyway?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeModal('guestContinue', false)">Sign In Instead</button>
+                <button class="btn btn-confirm" onclick="closeModal('guestContinue', true)">Continue as Guest</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Sign In Required Modal -->
+    <div class="modal-overlay" id="dashboardSignInModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-icon">📊</div>
+                <h3 class="modal-title">Sign In Required</h3>
+                <p class="modal-message">Sign in to access your profile dashboard and track your progress!</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeModal('dashboardSignIn', false)">Maybe Later</button>
+                <button class="btn btn-confirm" onclick="closeModal('dashboardSignIn', true)">Sign In</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guest Sign Up Encouragement Modal -->
+    <div class="modal-overlay" id="guestSignUpModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-icon">🎉</div>
+                <h3 class="modal-title">Great job! Your result has been saved anonymously.</h3>
+                <div class="modal-stats" id="modalGameStats">
+                    <!-- Game stats will be populated here -->
+                </div>
+                <p class="modal-message">Sign in to save results to your profile and compete on leaderboards?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeModal('guestSignUp', false)">Maybe Later</button>
+                <button class="btn btn-confirm" onclick="closeModal('guestSignUp', true)">Sign In</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Play Another Game Modal -->
+    <div class="modal-overlay" id="playAnotherModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-icon">🎮</div>
+                <h3 class="modal-title">Result saved!</h3>
+                <p class="modal-message">Play another game?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeModal('playAnother', false)">Finish Playing</button>
+                <button class="btn btn-confirm" onclick="closeModal('playAnother', true)">New Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Game While Playing Confirmation Modal -->
+    <div class="modal-overlay" id="newGameModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-icon">🎯</div>
+                <h3 class="modal-title">Start New Game?</h3>
+                <p class="modal-message">You have a game in progress. Starting a new game will lose your current progress.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeModal('newGame', false)">Continue Current Game</button>
+                <button class="btn btn-confirm" onclick="closeModal('newGame', true)">Start New Game</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1 class="title" onclick="window.location.href='.html'">LYTIC</h1>
+            <h1 class="title" onclick="window.location.href='hub.html'">LYTIC</h1>
             <p class="subtitle">Crack the code with perfect precision</p>
         </div>
 
@@ -941,1258 +2736,821 @@
         </div>
     </div>
 
-    
-    <script>
-        // ===== ENHANCED UNIVERSAL SAVING SYSTEM =====
-        let supabase = null;
-        let appConfig = null;
-        let currentUser = null;
-        let isSigningOut = false;
-        let isGuestMode = false;
-
-        // Game variables
-        let secretCode = [];
-        let turnCount = 0;
-        let gameWon = false;
-        let codeLength = 4;
-        let eliminationState = {};
-        let gameStartTime = null;
-        let gameEndTime = null;
-        let currentGameResult = null;
-
-        // Enhanced game variables with tracking
-        let gameSession = {
-            sessionId: null,
-            startTime: null,
-            endTime: null,
-            guessHistory: [],
-            deviceInfo: null
-        };
-
-        // Rate limiting for guess submissions
-        let lastGuessTime = 0;
-        const GUESS_COOLDOWN = 500;
-
-        // Initialize session tracking
-        function initializeGameSession() {
-            gameSession.sessionId = generateSessionId();
-            gameSession.deviceInfo = getDeviceInfo();
-            console.log('🎮 Game session initialized:', gameSession.sessionId);
-        }
-
-        // Generate unique session ID
-        function generateSessionId() {
-            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        }
-
-        // Get device/browser information (anonymous)
-        function getDeviceInfo() {
-            return {
-                userAgent: navigator.userAgent,
-                language: navigator.language,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                screenWidth: screen.width,
-                screenHeight: screen.height,
-                timestamp: new Date().toISOString()
-            };
-        }
-
-        // Secure App Initialization
-        async function initializeApp() {
-            try {
-                console.log('🔧 Loading secure configuration...');
-                
-                // Load config from backend
-                const response = await fetch('/api/config');
-                if (!response.ok) {
-                    throw new Error(`Config load failed: ${response.status}`);
-                }
-                
-                appConfig = await response.json();
-                console.log(`✅ Config loaded: ${appConfig.environment} mode`);
-                
-                // Initialize Supabase with server-provided config
-                supabase = window.supabase.createClient(
-                    appConfig.supabase.url,
-                    appConfig.supabase.anonKey
-                );
-                
-                console.log('✅ Supabase initialized securely');
-                
-                // Initialize game session tracking
-                initializeGameSession();
-                
-                // Load user data
-                await loadUserData();
-                
-                // Background sync of any pending backup data
-                setTimeout(async () => {
-                    if (navigator.onLine) {
-                        await syncLocalBackup();
-                    }
-                }, 2000);
-                
-                console.log('🎮 Lytic initialized successfully with universal saving!');
-                
-            } catch (error) {
-                console.error('❌ Failed to initialize app:', error);
-                showInitializationError(error);
-            }
-        }
-
-        function showInitializationError(error) {
-            const container = document.querySelector('.container');
-            if (container) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; color: white;">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">🔧</div>
-                        <h2>Setting up secure connection...</h2>
-                        <p style="margin: 1rem 0; opacity: 0.7;">
-                            Please wait while we establish a secure connection to our servers.
-                        </p>
-                        <button onclick="location.reload()" 
-                                style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                            Retry Connection
-                        </button>
-                    </div>
-                `;
-            }
-        }
-
-        // Input validation and sanitization
-        function sanitizeInput(input) {
-            if (typeof input !== 'string') return '';
-            return input.replace(/[^0-9]/g, '').slice(0, 7);
-        }
-
-        function validateGuess(input) {
-            const sanitized = sanitizeInput(input);
-            
-            if (sanitized.length !== codeLength) {
-                return { valid: false, message: `Please enter exactly ${codeLength} digits.` };
-            }
-            
-            if (!/^\d+$/.test(sanitized)) {
-                return { valid: false, message: 'Please enter only numbers.' };
-            }
-            
-            return { valid: true, value: sanitized };
-        }
-
-        // Universal game result saving function
-        async function saveGameResult() {
-            if (!currentGameResult) {
-                console.warn('Cannot save result - no game result available');
-                return;
-            }
-            
-            console.log('💾 Starting universal save process...');
-            
-            // Prepare comprehensive game data
-            const gameData = {
-                user_id: currentUser ? currentUser.id : null,
-                session_id: gameSession.sessionId,
-                difficulty: currentGameResult.difficulty,
-                attempts: currentGameResult.attempts,
-                time_taken: currentGameResult.timeInSeconds,
-                completed: currentGameResult.completed,
-                score: currentGameResult.score || 0,
-                secret_code: currentGameResult.secretCode,
-                final_guess: currentGameResult.finalGuess,
-                is_guest: isGuestMode || !currentUser,
-                device_info: gameSession.deviceInfo,
-                guess_history: gameSession.guessHistory,
-                game_started_at: new Date(gameSession.startTime).toISOString(),
-                game_ended_at: new Date(gameSession.endTime).toISOString(),
-                created_at: new Date().toISOString(),
-                total_game_time: currentGameResult.timeInSeconds,
-                average_time_per_guess: currentGameResult.attempts > 0 ? 
-                    currentGameResult.timeInSeconds / currentGameResult.attempts : 0,
-                win_rate_this_session: calculateSessionWinRate(),
-                browser_language: navigator.language,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                status: currentGameResult.completed ? 'completed' : 'abandoned',
-                abandoned: false
-            };
-            
-            // Try multiple save methods
-            const saveSuccess = await attemptSave(gameData);
-            
-            if (saveSuccess) {
-                console.log('✅ Game result saved successfully');
-                updateLocalStatsCache(gameData);
-            } else {
-                console.error('❌ Save failed, saving to local backup');
-                saveToLocalStorage(gameData);
-            }
-        }
-
-        // Attempt to save using multiple methods
-        async function attemptSave(gameData) {
-            const methods = [
-                () => saveViaSupabase(gameData),
-                () => saveViaBackendAPI(gameData)
-            ];
-            
-            for (const method of methods) {
-                try {
-                    console.log(`🔄 Attempting save method ${methods.indexOf(method) + 1}...`);
-                    const result = await method();
-                    if (result) {
-                        console.log(`✅ Save successful via method ${methods.indexOf(method) + 1}`);
-                        return true;
-                    }
-                } catch (error) {
-                    console.warn(`⚠️ Save method ${methods.indexOf(method) + 1} failed:`, error.message);
-                }
-            }
-            return false;
-        }
-
-        // Method 1: Direct Supabase save
-        async function saveViaSupabase(gameData) {
-            if (!supabase) throw new Error('Supabase not available');
-            
-            const { data, error } = await supabase
-                .from('game_results')
-                .insert([gameData])
-                .select();
-            
-            if (error) throw error;
-            return data;
-        }
-
-        // Method 2: Backend API save
-        async function saveViaBackendAPI(gameData) {
-            const response = await fetch('/api/save-game', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(gameData)
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'API save failed');
-            }
-            
-            return await response.json();
-        }
-
-        // Backup save to local storage
-        function saveToLocalStorage(gameData) {
-            try {
-                const backupKey = 'lytic_backup_results';
-                const existing = JSON.parse(localStorage.getItem(backupKey) || '[]');
-                
-                existing.push({
-                    ...gameData,
-                    backup_timestamp: Date.now()
-                });
-                
-                // Keep only last 10 backup results
-                if (existing.length > 10) {
-                    existing.splice(0, existing.length - 10);
-                }
-                
-                localStorage.setItem(backupKey, JSON.stringify(existing));
-                console.log('📦 Game result saved to local backup');
-                
-                // Schedule retry for later
-                setTimeout(() => {
-                    if (navigator.onLine) syncLocalBackup();
-                }, 30000);
-                
-            } catch (error) {
-                console.error('Failed to save to local storage:', error);
-            }
-        }
-
-        // Sync local backup data
-        async function syncLocalBackup() {
-            if (!supabase) return;
-            
-            try {
-                const backupKey = 'lytic_backup_results';
-                const backupData = JSON.parse(localStorage.getItem(backupKey) || '[]');
-                
-                if (backupData.length === 0) return;
-                
-                console.log(`📤 Syncing ${backupData.length} backup results...`);
-                
-                const response = await fetch('/api/sync-backup-games', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ games: backupData })
-                });
-                
-                if (response.ok) {
-                    localStorage.removeItem(backupKey);
-                    console.log('✅ Backup results synced successfully');
-                }
-                
-            } catch (error) {
-                console.error('Failed to sync local backup:', error);
-            }
-        }
-
-        // Calculate session win rate
-        function calculateSessionWinRate() {
-            const sessionKey = 'lytic_session_' + new Date().toDateString();
-            const sessionStats = JSON.parse(sessionStorage.getItem(sessionKey) || '{"games": 0, "wins": 0}');
-            
-            sessionStats.games++;
-            if (currentGameResult && currentGameResult.completed) {
-                sessionStats.wins++;
-            }
-            
-            sessionStorage.setItem(sessionKey, JSON.stringify(sessionStats));
-            return sessionStats.games > 0 ? (sessionStats.wins / sessionStats.games) * 100 : 0;
-        }
-
-        // Update local stats cache
-        function updateLocalStatsCache(gameData) {
-            try {
-                const cacheKey = currentUser ? `lytic_stats_${currentUser.id}` : 'lytic_guest_stats';
-                const stats = JSON.parse(localStorage.getItem(cacheKey) || '{"totalGames": 0, "totalWins": 0, "totalScore": 0}');
-                
-                stats.totalGames++;
-                if (gameData.completed) {
-                    stats.totalWins++;
-                }
-                stats.totalScore += gameData.score || 0;
-                stats.lastPlayed = Date.now();
-                
-                localStorage.setItem(cacheKey, JSON.stringify(stats));
-            } catch (error) {
-                console.error('Failed to update local stats cache:', error);
-            }
-        }
-
-        // Enhanced submitGuess with detailed tracking and universal saving
-        function submitGuess() {
-            if (gameWon) return;
-            
-            // Rate limiting
-            const now = Date.now();
-            if (now - lastGuessTime < GUESS_COOLDOWN) {
-                console.warn('Rate limit: Please wait before submitting another guess');
-                return;
-            }
-            lastGuessTime = now;
-            
-            const guessInput = document.getElementById('guessInput');
-            const rawGuess = guessInput.value.trim();
-            
-            // Validate and sanitize input
-            const validation = validateGuess(rawGuess);
-            if (!validation.valid) {
-                document.getElementById('feedback').textContent = validation.message;
-                return;
-            }
-            
-            const guess = validation.value;
-            turnCount++;
-            document.getElementById('turnCounter').textContent = turnCount;
-            
-            const guessArray = guess.split('').map(Number);
-            let correctCount = 0;
-            
-            for (let i = 0; i < codeLength; i++) {
-                if (guessArray[i] === secretCode[i]) {
-                    correctCount++;
-                }
-            }
-            
-            // Track this guess in session history
-            const guessData = {
-                turnNumber: turnCount,
-                guess: guess,
-                correctCount: correctCount,
-                timestamp: now,
-                timeSinceStart: now - gameStartTime
-            };
-            gameSession.guessHistory.push(guessData);
-            
-            // Add to history table
-            const historyBody = document.getElementById('historyBody');
-            const row = historyBody.insertRow();
-            row.insertCell(0).textContent = turnCount;
-            row.insertCell(1).textContent = guess;
-            row.insertCell(2).textContent = correctCount;
-            
-            // Update feedback
-            const feedbackEl = document.getElementById('feedback');
-            if (correctCount === codeLength) {
-                gameEndTime = Date.now();
-                gameSession.endTime = gameEndTime;
-                const timeInSeconds = Math.floor((gameEndTime - gameStartTime) / 1000);
-                const score = calculateScore(codeLength, turnCount, timeInSeconds, true);
-                
-                feedbackEl.textContent = `Perfect! All ${correctCount} digits correct!`;
-                feedbackEl.className = 'feedback correct';
-                document.getElementById('winMessage').classList.remove('hidden');
-                gameWon = true;
-                
-                // Prepare comprehensive game result
-                currentGameResult = {
-                    difficulty: codeLength,
-                    attempts: turnCount,
-                    timeInSeconds: timeInSeconds,
-                    completed: true,
-                    score: score,
-                    secretCode: secretCode.join(''),
-                    finalGuess: guess,
-                    sessionData: gameSession
-                };
-                
-                // Save result immediately with universal system
-                setTimeout(async () => {
-                    await saveGameResult();
-                    
-                    // Show appropriate UI based on user status
-                    if (currentUser && !isGuestMode) {
-                        setTimeout(() => showSaveModal(), 500);
-                    } else {
-                        setTimeout(() => {
-                            const message = `Great job! Your result has been saved anonymously.\n\n` +
-                                          `Score: ${score.toLocaleString()}\n` +
-                                          `Time: ${timeInSeconds}s\n` +
-                                          `Attempts: ${turnCount}\n\n` +
-                                          `Sign in to save results to your profile and compete on leaderboards?`;
-                            
-                            if (confirm(message)) {
-                                window.location.href = 'index.html';
-                            }
-                        }, 800);
-                    }
-                }, 200);
-                
-            } else {
-                feedbackEl.textContent = `${correctCount} out of ${codeLength} digits correct.`;
-                feedbackEl.className = 'feedback';
-            }
-            
-            guessInput.value = '';
-            guessInput.focus();
-        }
-
-        // Enhanced newGame function with session tracking
-        function newGame() {
-            const selectedLength = parseInt(document.getElementById('codeLength').value);
-            
-            if (selectedLength < 4 || selectedLength > 7) {
-                console.error('Invalid code length selected');
-                return;
-            }
-            
-            codeLength = selectedLength;
-            document.getElementById('guessInput').maxLength = codeLength;
-            
-            secretCode = [];
-            for (let i = 0; i < codeLength; i++) {
-                secretCode.push(Math.floor(Math.random() * 10));
-            }
-            
-            // Reset game state
-            turnCount = 0;
-            gameWon = false;
-            gameStartTime = Date.now();
-            gameEndTime = null;
-            currentGameResult = null;
-            
-            // Initialize session for this game
-            gameSession.startTime = gameStartTime;
-            gameSession.guessHistory = [];
-            
-            // UI updates
-            document.getElementById('turnCounter').textContent = turnCount;
-            document.getElementById('historyBody').innerHTML = '';
-            document.getElementById('feedback').textContent = `Game started! Guess the ${codeLength}-digit code.`;
-            document.getElementById('feedback').className = 'feedback';
-            document.getElementById('winMessage').classList.add('hidden');
-            document.getElementById('guessInput').value = '';
-            document.getElementById('guessInput').focus();
-            
-            initializeEliminationGrid();
-            
-            if (appConfig && appConfig.environment === 'development') {
-                console.log('Secret code:', secretCode.join(''));
-            }
-        }
-
-        // Auto-save on page unload (for incomplete games)
-        window.addEventListener('beforeunload', function() {
-            if (gameStartTime && !gameWon && turnCount > 0) {
-                const abandonedData = {
-                    user_id: currentUser ? currentUser.id : null,
-                    session_id: gameSession.sessionId,
-                    difficulty: codeLength,
-                    attempts: turnCount,
-                    time_taken: Math.floor((Date.now() - gameStartTime) / 1000),
-                    completed: false,
-                    score: 0,
-                    is_guest: isGuestMode || !currentUser,
-                    game_started_at: new Date(gameStartTime).toISOString(),
-                    guess_history: gameSession.guessHistory,
-                    device_info: gameSession.deviceInfo,
-                    abandoned: true,
-                    abandon_reason: 'page_unload',
-                    status: 'abandoned',
-                    created_at: new Date().toISOString()
-                };
-                
-                // Use sendBeacon for reliable sending on page unload
-                if (navigator.sendBeacon) {
-                    const blob = new Blob([JSON.stringify(abandonedData)], { type: 'application/json' });
-                    navigator.sendBeacon('/api/save-abandoned-game', blob);
-                } else {
-                    saveToLocalStorage(abandonedData);
-                }
-            }
-        });
-
-        // Network status handling
-        window.addEventListener('online', syncLocalBackup);
-        window.addEventListener('offline', function() {
-            console.log('🔌 Offline mode - results will be saved locally');
-        });
-
-        // Load and display user data
-        async function loadUserData() {
-            if (!supabase) {
-                console.warn('Supabase not initialized yet');
-                return;
-            }
-            
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const guestParam = urlParams.get('guest');
-                
-                if (guestParam === 'true') {
-                    isGuestMode = true;
-                    currentUser = null;
-                    updateProfileDisplay(null, true);
-                    return;
-                }
-
-                const { data: { user }, error } = await supabase.auth.getUser();
-                
-                if (error) {
-                    console.error('Error getting user:', error);
-                    isGuestMode = true;
-                    updateProfileDisplay(null, true);
-                    return;
-                }
-
-                if (user) {
-                    isGuestMode = false;
-                    currentUser = user;
-                    updateProfileDisplay(user, false);
-                } else {
-                    isGuestMode = true;
-                    updateProfileDisplay(null, true);
-                }
-            } catch (error) {
-                console.error('Failed to load user data:', error);
-                isGuestMode = true;
-                updateProfileDisplay(null, true);
-            }
-        }
-
-        // Update profile display with user information
-        function updateProfileDisplay(user, isGuestMode = false) {
-            const nameElement = document.getElementById('profileName');
-            const emailElement = document.getElementById('profileEmail');
-            const profileMenu = document.getElementById('profileMenu');
-
-            if (user && !isGuestMode) {
-                const displayName = user.user_metadata?.display_name || 
-                                 user.user_metadata?.full_name || 
-                                 user.email?.split('@')[0] || 
-                                 'User';
-                nameElement.textContent = displayName;
-                emailElement.textContent = user.email || 'No email';
-                
-                profileMenu.innerHTML = `
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link" onclick="goToHub()">
-                            <span class="profile-menu-icon">🏠</span>
-                            <span>Hub</span>
-                        </button>
-                    </li>
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link" onclick="showDashboard()">
-                            <span class="profile-menu-icon">📊</span>
-                            <span>Dashboard</span>
-                        </button>
-                    </li>
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link danger" id="signOutButton" onclick="signOut()">
-                            <span class="profile-menu-icon">🚪</span>
-                            <span>Sign Out</span>
-                        </button>
-                    </li>
-                `;
-            } else {
-                nameElement.textContent = 'Guest User';
-                emailElement.innerHTML = `
-                    Playing as Guest
-                    <div class="guest-indicator">GUEST MODE</div>
-                `;
-                
-                profileMenu.innerHTML = `
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link" onclick="goToHub()">
-                            <span class="profile-menu-icon">🏠</span>
-                            <span>Hub</span>
-                        </button>
-                    </li>
-                    <li class="profile-menu-item">
-                        <button class="profile-menu-link primary" onclick="signInAsUser()">
-                            <span class="profile-menu-icon">🔑</span>
-                            <span>Sign In</span>
-                        </button>
-                    </li>
-                `;
-            }
-        }
-
-        // Profile Functions
-        function toggleProfileDropdown() {
-            const dropdown = document.getElementById('profileDropdown');
-            dropdown.classList.toggle('show');
-        }
-
-        function goToHub() {
-            if (isGuestMode) {
-                window.location.href = 'hub.html?guest=true';
-            } else {
-                window.location.href = 'hub.html';
-            }
-        }
-
-        function showDashboard() {
-            if (isGuestMode) {
-                alert('Sign in to access your profile dashboard and track your progress!');
-            } else {
-                alert('Profile Dashboard coming soon! Here you\'ll see your stats and achievements.');
-            }
-            toggleProfileDropdown();
-        }
-
-        async function signOut() {
-            if (isSigningOut || !supabase) return;
-            
-            if (!confirm('Are you sure you want to sign out?')) {
-                toggleProfileDropdown();
-                return;
-            }
-
-            isSigningOut = true;
-            
-            try {
-                const { error } = await supabase.auth.signOut({ scope: 'global' });
-                if (error) console.error('Supabase sign out error:', error);
-                
-                localStorage.clear();
-                sessionStorage.clear();
-                window.location.replace('index.html');
-            } catch (error) {
-                console.error('Error during sign out:', error);
-                window.location.replace('index.html');
-            } finally {
-                isSigningOut = false;
-            }
-        }
-
-        function signInAsUser() {
-            window.location.href = 'index.html';
-        }
-
-        // Calculate score based on difficulty, attempts, and time
-        function calculateScore(difficulty, attempts, timeInSeconds, completed) {
-            if (!completed) return 0;
-            
-            const baseScore = difficulty * 250;
-            const attemptPenalty = Math.max(0, (attempts - difficulty) * 50);
-            const timePenalty = Math.min(timeInSeconds * 2, 300);
-            const difficultyBonus = difficulty * 100;
-            
-            return Math.max(baseScore - attemptPenalty - timePenalty + difficultyBonus, 100);
-        }
-
-        // Save modal functions
-        function showSaveModal() {
-            if (!currentGameResult) return;
-            
-            const modal = document.getElementById('saveModal');
-            const statsDiv = document.getElementById('saveStats');
-            
-            const timeString = currentGameResult.timeInSeconds >= 60 ? 
-                `${Math.floor(currentGameResult.timeInSeconds / 60)}m ${currentGameResult.timeInSeconds % 60}s` :
-                `${currentGameResult.timeInSeconds}s`;
-            
-            statsDiv.innerHTML = `
-                <div><span>Difficulty:</span><span>${currentGameResult.difficulty} digits</span></div>
-                <div><span>Attempts:</span><span>${currentGameResult.attempts}</span></div>
-                <div><span>Time:</span><span>${timeString}</span></div>
-                <div><span>Your Score:</span><span>${currentGameResult.score.toLocaleString()}</span></div>
-            `;
-            
-            modal.classList.add('show');
-        }
-
-        function hideSaveModal() {
-            document.getElementById('saveModal').classList.remove('show');
-        }
-
-        async function saveResult() {
-            if (!currentUser || isGuestMode) {
-                alert('Please sign in to save your results to your profile!');
-                hideSaveModal();
-                return;
-            }
-            
-            hideSaveModal();
-            setTimeout(() => {
-                if (confirm('Result saved! Play another game?')) {
-                    newGame();
-                }
-            }, 300);
-        }
-
-        // Initialize elimination grid
-        function initializeEliminationGrid() {
-            const grid = document.getElementById('eliminationGrid');
-            grid.innerHTML = '';
-            grid.style.gridTemplateColumns = `auto repeat(${codeLength}, 1fr)`;
-            
-            eliminationState = {};
-            
-            const emptyCell = document.createElement('div');
-            emptyCell.className = 'grid-header';
-            grid.appendChild(emptyCell);
-            
-            for (let pos = 0; pos < codeLength; pos++) {
-                const header = document.createElement('div');
-                header.className = 'grid-header';
-                header.textContent = `P${pos + 1}`;
-                grid.appendChild(header);
-            }
-            
-            for (let digit = 0; digit <= 9; digit++) {
-                const rowHeader = document.createElement('div');
-                rowHeader.className = 'grid-row-header';
-                rowHeader.textContent = digit.toString();
-                grid.appendChild(rowHeader);
-                
-                for (let pos = 0; pos < codeLength; pos++) {
-                    const cell = document.createElement('button');
-                    cell.className = 'grid-cell';
-                    cell.dataset.digit = digit;
-                    cell.dataset.position = pos;
-                    cell.onclick = () => toggleCell(digit, pos);
-                    grid.appendChild(cell);
-                    
-                    eliminationState[`${digit}-${pos}`] = 'unknown';
-                }
-            }
-        }
-        
-        function toggleCell(digit, position) {
-            const key = `${digit}-${position}`;
-            const cell = document.querySelector(`[data-digit="${digit}"][data-position="${position}"]`);
-            
-            if (eliminationState[key] === 'unknown') {
-                eliminationState[key] = 'no';
-                cell.className = 'grid-cell no';
-                cell.textContent = '✗';
-            } else if (eliminationState[key] === 'no') {
-                eliminationState[key] = 'yes';
-                cell.className = 'grid-cell yes';
-                cell.textContent = '✓';
-            } else {
-                eliminationState[key] = 'unknown';
-                cell.className = 'grid-cell';
-                cell.textContent = '';
-            }
-        }
-
-        function confirmReset() {
-            if (confirm('Are you sure you want to reset the game?')) {
-                newGame();
-            }
-        }
-
-        // Event Listeners
-        document.addEventListener('click', function(e) {
-            const profileContainer = document.querySelector('.profile-container');
-            const dropdown = document.getElementById('profileDropdown');
-            
-            if (profileContainer && !profileContainer.contains(e.target)) {
-                dropdown.classList.remove('show');
-            }
-        });
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                document.getElementById('profileDropdown').classList.remove('show');
-            }
-        });
-
-        // Enter key support
-        document.addEventListener('DOMContentLoaded', function() {
-            const guessInput = document.getElementById('guessInput');
-            if (guessInput) {
-                guessInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        submitGuess();
-                    }
-                });
-            }
-        });
-
-        // Initialize on page load
-        window.addEventListener('load', initializeApp);
-
-        console.log('🎮 Enhanced universal saving system loaded and ready!');
-    </script>
-
-
-
-    <!-- Dashboard Modal - Add this to your existing game page -->
-<div id="dashboardModal" class="dashboard-modal">
-    <div class="dashboard-content">
-        <div class="dashboard-header">
-            <h1 class="dashboard-title">📊 Player Dashboard</h1>
-            <button class="close-button" onclick="hideDashboard()">×</button>
-        </div>
-
-        <!-- Loading State -->
-        <div id="loadingState" class="loading-state">
-            <div class="loading-spinner"></div>
-            <p>Loading your dashboard...</p>
-        </div>
-
-        <!-- Dashboard Content -->
-        <div id="dashboardData" style="display: none;">
-            <!-- User Statistics -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">🎯</div>
-                    <div class="stat-value" id="totalGames">0</div>
-                    <div class="stat-label">Total Games</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">🏆</div>
-                    <div class="stat-value" id="gamesWon">0</div>
-                    <div class="stat-label">Games Won</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">📈</div>
-                    <div class="stat-value" id="winRate">0%</div>
-                    <div class="stat-label">Win Rate</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⭐</div>
-                    <div class="stat-value" id="bestScore">0</div>
-                    <div class="stat-label">Best Score</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⚡</div>
-                    <div class="stat-value" id="avgAttempts">0</div>
-                    <div class="stat-label">Avg Attempts</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⏱️</div>
-                    <div class="stat-value" id="avgTime">0s</div>
-                    <div class="stat-label">Avg Time</div>
-                </div>
+    <!-- Dashboard Modal -->
+    <div id="dashboardModal" class="dashboard-modal">
+        <div class="dashboard-content">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">📊 Player Dashboard</h1>
+                <button class="close-button" onclick="hideDashboard()">×</button>
             </div>
 
-            <!-- Performance Analytics -->
-            <div class="performance-section">
-                <h2 class="section-title">📊 Performance Analytics</h2>
-                <div class="chart-card">
-                    <div class="chart-header">Performance by Difficulty</div>
-                    <div class="difficulty-breakdown" id="difficultyBreakdown">
-                        <!-- Will be populated by JavaScript -->
-                    </div>
-                </div>
+            <!-- Loading State -->
+            <div id="loadingState" class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Loading your dashboard...</p>
             </div>
 
-            <!-- Recent Games -->
-            <div class="recent-games">
-                <h2 class="section-title">🕒 Last 10 Games</h2>
-                <div class="table-container">
-                    <table class="games-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Difficulty</th>
-                                <th>Attempts</th>
-                                <th>Time</th>
-                                <th>Score</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recentGamesTable">
+            <!-- Dashboard Content -->
+            <div id="dashboardData" style="display: none;">
+                <!-- User Statistics -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-value" id="totalGames">0</div>
+                        <div class="stat-label">Total Games</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-value" id="gamesWon">0</div>
+                        <div class="stat-label">Games Won</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-value" id="winRate">0%</div>
+                        <div class="stat-label">Win Rate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-value" id="bestScore">0</div>
+                        <div class="stat-label">Best Score</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-value" id="avgAttempts">0</div>
+                        <div class="stat-label">Avg Attempts</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-value" id="avgTime">0s</div>
+                        <div class="stat-label">Avg Time</div>
+                    </div>
+                </div>
+
+                <!-- Performance Analytics -->
+                <div class="performance-section">
+                    <h2 class="section-title">📊 Performance Analytics</h2>
+                    <div class="chart-card">
+                        <div class="chart-header">Performance by Difficulty</div>
+                        <div class="difficulty-breakdown" id="difficultyBreakdown">
                             <!-- Will be populated by JavaScript -->
-                        </tbody>
-                    </table>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Error State -->
-        <div id="errorState" class="error-state" style="display: none;">
-            <div class="error-icon">⚠️</div>
-            <h3>Unable to Load Dashboard</h3>
-            <p>Please check your connection and try again.</p>
-            <button class="btn btn-primary" onclick="loadDashboard()">Retry</button>
-        </div>
+                <!-- Recent Games -->
+<div class="recent-games">
+    <h2 class="section-title">🕒 Last 10 Games</h2>
+    <div class="table-container">
+        <table class="games-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Difficulty</th>
+                    <th>Attempts</th>
+                    <th>Time</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="recentGamesTable">
+                <!-- Will be populated by JavaScript -->
+            </tbody>
+        </table>
     </div>
 </div>
+</div>
 
-<style>
-/* Dashboard Modal Styles */
-.dashboard-modal {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.9);
-    backdrop-filter: blur(12px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 3000;
-    padding: 1rem;
-    overflow-y: auto;
-}
-
-.dashboard-modal.show {
-    display: flex;
-}
-
-.dashboard-content {
-    background: rgba(15, 23, 42, 0.95);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 24px;
-    padding: 2rem;
-    max-width: 900px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
-    position: relative;
-}
-
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-}
-
-.dashboard-title {
-    font-size: 1.875rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.close-button {
-    background: rgba(239, 68, 68, 0.2);
-    border: 1px solid rgba(239, 68, 68, 0.3);
-    color: #fca5a5;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 1.2rem;
-}
-
-.close-button:hover {
-    background: rgba(239, 68, 68, 0.3);
-    transform: scale(1.1);
-}
-
-/* Stats Grid */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.stat-card {
-    background: rgba(30, 41, 59, 0.8);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 16px;
-    padding: 1.5rem;
-    text-align: center;
-    transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-4px);
-    border-color: rgba(96, 165, 250, 0.5);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
-}
-
-.stat-icon {
-    font-size: 1.8rem;
-    margin-bottom: 0.5rem;
-}
-
-.stat-value {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: #60a5fa;
-    margin-bottom: 0.25rem;
-}
-
-.stat-label {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-/* Performance Section */
-.performance-section {
-    margin-bottom: 2rem;
-}
-
-.section-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.chart-card {
-    background: rgba(30, 41, 59, 0.8);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 16px;
-    padding: 1.5rem;
-}
-
-.chart-header {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    text-align: center;
-}
-
-.difficulty-breakdown {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.difficulty-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    background: rgba(15, 23, 42, 0.8);
-    border-radius: 12px;
-    border-left: 4px solid transparent;
-    transition: all 0.3s ease;
-}
-
-.difficulty-item:hover {
-    transform: translateX(4px);
-}
-
-.difficulty-item.level-4 { border-left-color: #10b981; }
-.difficulty-item.level-5 { border-left-color: #f59e0b; }
-.difficulty-item.level-6 { border-left-color: #ef4444; }
-.difficulty-item.level-7 { border-left-color: #8b5cf6; }
-
-.difficulty-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.difficulty-name {
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-}
-
-.difficulty-stats {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.difficulty-score {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #60a5fa;
-}
-
-/* Recent Games */
-.recent-games {
-    background: rgba(30, 41, 59, 0.8);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 16px;
-    padding: 1.5rem;
-}
-
-.table-container {
-    overflow-x: auto;
-    margin-top: 1rem;
-}
-
-.games-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-}
-
-.games-table th {
-    background: rgba(15, 23, 42, 0.8);
-    padding: 0.75rem;
-    text-align: left;
-    font-weight: 600;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-}
-
-.games-table td {
-    padding: 0.75rem;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-}
-
-.games-table tbody tr:hover {
-    background: rgba(96, 165, 250, 0.1);
-}
-
-.status-won {
-    color: #4ade80;
-    font-weight: 600;
-}
-
-.status-lost {
-    color: #f87171;
-    font-weight: 600;
-}
-
-/* Loading State */
-.loading-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-top: 3px solid #60a5fa;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
-}
-
-/* Error State */
-.error-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem;
-    text-align: center;
-}
-
-.error-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-}
-
-.error-state h3 {
-    margin-bottom: 0.5rem;
-    color: #f87171;
-}
-
-.error-state p {
-    color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 1.5rem;
-}
-
-/* No Data State */
-.no-data {
-    text-align: center;
-    padding: 2rem;
-    color: rgba(255, 255, 255, 0.5);
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .dashboard-content {
-        margin: 0.5rem;
-        padding: 1.5rem;
-    }
-
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.75rem;
-    }
-
-    .stat-card {
-        padding: 1rem;
-    }
-
-    .stat-value {
-        font-size: 1.5rem;
-    }
-
-    .games-table {
-        font-size: 0.8rem;
-    }
-
-    .games-table th,
-    .games-table td {
-        padding: 0.5rem;
-    }
-
-    .difficulty-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
+<!-- Error State -->
+<div id="errorState" class="error-state" style="display: none;">
+    <div class="error-icon">⚠️</div>
+    <h3>Unable to Load Dashboard</h3>
+    <p>Please check your connection and try again.</p>
+    <button class="btn btn-primary" onclick="loadDashboard()">Retry</button>
+</div>
+</div>
+</div>
 
 <script>
-// Dashboard Functions - Add these to your existing JavaScript
+// ===== ENHANCED UNIVERSAL SAVING SYSTEM =====
+let supabase = null;
+let appConfig = null;
+let currentUser = null;
+let isSigningOut = false;
+let isGuestMode = false;
 
+// Game variables
+let secretCode = [];
+let turnCount = 0;
+let gameWon = false;
+let codeLength = 4;
+let eliminationState = {};
+let gameStartTime = null;
+let gameEndTime = null;
+let currentGameResult = null;
+
+// Enhanced game variables with tracking
+let gameSession = {
+    sessionId: null,
+    startTime: null,
+    endTime: null,
+    guessHistory: [],
+    deviceInfo: null
+};
+
+// Rate limiting for guess submissions
+let lastGuessTime = 0;
+const GUESS_COOLDOWN = 500;
+
+// Modal System
+let modalResolvers = {};
+
+// Initialize session tracking
+function initializeGameSession() {
+    gameSession.sessionId = generateSessionId();
+    gameSession.deviceInfo = getDeviceInfo();
+    console.log('🎮 Game session initialized:', gameSession.sessionId);
+}
+
+// Generate unique session ID
+function generateSessionId() {
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Get device/browser information (anonymous)
+function getDeviceInfo() {
+    return {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        screenWidth: screen.width,
+        screenHeight: screen.height,
+        timestamp: new Date().toISOString()
+    };
+}
+
+// Universal modal function
+function showModal(modalId, customData = {}) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById(modalId);
+        if (!modal) {
+            console.error(`Modal ${modalId} not found`);
+            resolve(false);
+            return;
+        }
+
+        // Store resolver for this modal
+        modalResolvers[modalId] = resolve;
+
+        // Custom data handling for specific modals
+        if (modalId === 'guestSignUpModal' && customData.gameResult) {
+            populateGameStats(customData.gameResult);
+        }
+
+        // Show modal
+        modal.classList.add('show');
+
+        // Focus the confirm button
+        const confirmBtn = modal.querySelector('.btn-confirm');
+        if (confirmBtn) confirmBtn.focus();
+
+        // Handle escape key
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                closeModal(modalId.replace('Modal', ''), false);
+                document.removeEventListener('keydown', handleEscape);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+    });
+}
+
+// Universal close modal function
+function closeModal(modalType, result) {
+    const modalId = modalType + 'Modal';
+    const modal = document.getElementById(modalId);
+    
+    if (!modal) return;
+    
+    modal.classList.remove('show');
+    
+    // Call resolver if it exists
+    if (modalResolvers[modalId]) {
+        modalResolvers[modalId](result);
+        delete modalResolvers[modalId];
+    }
+}
+
+// Populate game stats for guest sign up modal
+function populateGameStats(gameResult) {
+    const statsDiv = document.getElementById('modalGameStats');
+    if (!statsDiv || !gameResult) return;
+
+    const timeString = gameResult.timeInSeconds >= 60 ? 
+        `${Math.floor(gameResult.timeInSeconds / 60)}m ${gameResult.timeInSeconds % 60}s` :
+        `${gameResult.timeInSeconds}s`;
+
+    statsDiv.innerHTML = `
+        <div><span>Score:</span><span>${gameResult.score.toLocaleString()}</span></div>
+        <div><span>Time:</span><span>${timeString}</span></div>
+        <div><span>Attempts:</span><span>${gameResult.attempts}</span></div>
+    `;
+}
+
+// Secure App Initialization
+async function initializeApp() {
+    try {
+        console.log('🔧 Loading secure configuration...');
+        
+        // Load config from backend
+        const response = await fetch('/api/config');
+        if (!response.ok) {
+            throw new Error(`Config load failed: ${response.status}`);
+        }
+        
+        appConfig = await response.json();
+        console.log(`✅ Config loaded: ${appConfig.environment} mode`);
+        
+        // Initialize Supabase with server-provided config
+        supabase = window.supabase.createClient(
+            appConfig.supabase.url,
+            appConfig.supabase.anonKey
+        );
+        
+        console.log('✅ Supabase initialized securely');
+        
+        // Initialize game session tracking
+        initializeGameSession();
+        
+        // Load user data
+        await loadUserData();
+        
+        // Background sync of any pending backup data
+        setTimeout(async () => {
+            if (navigator.onLine) {
+                await syncLocalBackup();
+            }
+        }, 2000);
+        
+        console.log('🎮 Lytic initialized successfully with universal saving!');
+        
+    } catch (error) {
+        console.error('❌ Failed to initialize app:', error);
+        showInitializationError(error);
+    }
+}
+
+function showInitializationError(error) {
+    const container = document.querySelector('.container');
+    if (container) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: white;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🔧</div>
+                <h2>Setting up secure connection...</h2>
+                <p style="margin: 1rem 0; opacity: 0.7;">
+                    Please wait while we establish a secure connection to our servers.
+                </p>
+                <button onclick="location.reload()" 
+                        style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                    Retry Connection
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Input validation and sanitization
+function sanitizeInput(input) {
+    if (typeof input !== 'string') return '';
+    return input.replace(/[^0-9]/g, '').slice(0, 7);
+}
+
+function validateGuess(input) {
+    const sanitized = sanitizeInput(input);
+    
+    if (sanitized.length !== codeLength) {
+        return { valid: false, message: `Please enter exactly ${codeLength} digits.` };
+    }
+    
+    if (!/^\d+$/.test(sanitized)) {
+        return { valid: false, message: 'Please enter only numbers.' };
+    }
+    
+    return { valid: true, value: sanitized };
+}
+
+// Universal game result saving function
+async function saveGameResult() {
+    if (!currentGameResult) {
+        console.warn('Cannot save result - no game result available');
+        return;
+    }
+    
+    console.log('💾 Starting universal save process...');
+    
+    // Prepare comprehensive game data
+    const gameData = {
+        user_id: currentUser ? currentUser.id : null,
+        session_id: gameSession.sessionId,
+        difficulty: currentGameResult.difficulty,
+        attempts: currentGameResult.attempts,
+        time_taken: currentGameResult.timeInSeconds,
+        completed: currentGameResult.completed,
+        score: currentGameResult.score || 0,
+        secret_code: currentGameResult.secretCode,
+        final_guess: currentGameResult.finalGuess,
+        is_guest: isGuestMode || !currentUser,
+        device_info: gameSession.deviceInfo,
+        guess_history: gameSession.guessHistory,
+        game_started_at: new Date(gameSession.startTime).toISOString(),
+        game_ended_at: new Date(gameSession.endTime).toISOString(),
+        created_at: new Date().toISOString(),
+        total_game_time: currentGameResult.timeInSeconds,
+        average_time_per_guess: currentGameResult.attempts > 0 ? 
+            currentGameResult.timeInSeconds / currentGameResult.attempts : 0,
+        win_rate_this_session: calculateSessionWinRate(),
+        browser_language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        status: currentGameResult.completed ? 'completed' : 'abandoned',
+        abandoned: false
+    };
+    
+    // Try multiple save methods
+    const saveSuccess = await attemptSave(gameData);
+    
+    if (saveSuccess) {
+        console.log('✅ Game result saved successfully');
+        updateLocalStatsCache(gameData);
+    } else {
+        console.error('❌ Save failed, saving to local backup');
+        saveToLocalStorage(gameData);
+    }
+}
+
+// Attempt to save using multiple methods
+async function attemptSave(gameData) {
+    const methods = [
+        () => saveViaSupabase(gameData),
+        () => saveViaBackendAPI(gameData)
+    ];
+    
+    for (const method of methods) {
+        try {
+            console.log(`🔄 Attempting save method ${methods.indexOf(method) + 1}...`);
+            const result = await method();
+            if (result) {
+                console.log(`✅ Save successful via method ${methods.indexOf(method) + 1}`);
+                return true;
+            }
+        } catch (error) {
+            console.warn(`⚠️ Save method ${methods.indexOf(method) + 1} failed:`, error.message);
+        }
+    }
+    return false;
+}
+
+// Method 1: Direct Supabase save
+async function saveViaSupabase(gameData) {
+    if (!supabase) throw new Error('Supabase not available');
+    
+    const { data, error } = await supabase
+        .from('game_results')
+        .insert([gameData])
+        .select();
+    
+    if (error) throw error;
+    return data;
+}
+
+// Method 2: Backend API save
+async function saveViaBackendAPI(gameData) {
+    const response = await fetch('/api/save-game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(gameData)
+    });
+    
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'API save failed');
+    }
+    
+    return await response.json();
+}
+
+// Backup save to local storage
+function saveToLocalStorage(gameData) {
+    try {
+        const backupKey = 'lytic_backup_results';
+        const existing = JSON.parse(localStorage.getItem(backupKey) || '[]');
+        
+        existing.push({
+            ...gameData,
+            backup_timestamp: Date.now()
+        });
+        
+        // Keep only last 10 backup results
+        if (existing.length > 10) {
+            existing.splice(0, existing.length - 10);
+        }
+        
+        localStorage.setItem(backupKey, JSON.stringify(existing));
+        console.log('📦 Game result saved to local backup');
+        
+        // Schedule retry for later
+        setTimeout(() => {
+            if (navigator.onLine) syncLocalBackup();
+        }, 30000);
+        
+    } catch (error) {
+        console.error('Failed to save to local storage:', error);
+    }
+}
+
+// Sync local backup data
+async function syncLocalBackup() {
+    if (!supabase) return;
+    
+    try {
+        const backupKey = 'lytic_backup_results';
+        const backupData = JSON.parse(localStorage.getItem(backupKey) || '[]');
+        
+        if (backupData.length === 0) return;
+        
+        console.log(`📤 Syncing ${backupData.length} backup results...`);
+        
+        const response = await fetch('/api/sync-backup-games', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ games: backupData })
+        });
+        
+        if (response.ok) {
+            localStorage.removeItem(backupKey);
+            console.log('✅ Backup results synced successfully');
+        }
+        
+    } catch (error) {
+        console.error('Failed to sync local backup:', error);
+    }
+}
+
+// Calculate session win rate
+function calculateSessionWinRate() {
+    const sessionKey = 'lytic_session_' + new Date().toDateString();
+    const sessionStats = JSON.parse(sessionStorage.getItem(sessionKey) || '{"games": 0, "wins": 0}');
+    
+    sessionStats.games++;
+    if (currentGameResult && currentGameResult.completed) {
+        sessionStats.wins++;
+    }
+    
+    sessionStorage.setItem(sessionKey, JSON.stringify(sessionStats));
+    return sessionStats.games > 0 ? (sessionStats.wins / sessionStats.games) * 100 : 0;
+}
+
+// Update local stats cache
+function updateLocalStatsCache(gameData) {
+    try {
+        const cacheKey = currentUser ? `lytic_stats_${currentUser.id}` : 'lytic_guest_stats';
+        const stats = JSON.parse(localStorage.getItem(cacheKey) || '{"totalGames": 0, "totalWins": 0, "totalScore": 0}');
+        
+        stats.totalGames++;
+        if (gameData.completed) {
+            stats.totalWins++;
+        }
+        stats.totalScore += gameData.score || 0;
+        stats.lastPlayed = Date.now();
+        
+        localStorage.setItem(cacheKey, JSON.stringify(stats));
+    } catch (error) {
+        console.error('Failed to update local stats cache:', error);
+    }
+}
+
+// Enhanced submitGuess with detailed tracking and universal saving
+function submitGuess() {
+    if (gameWon) return;
+    
+    // Rate limiting
+    const now = Date.now();
+    if (now - lastGuessTime < GUESS_COOLDOWN) {
+        console.warn('Rate limit: Please wait before submitting another guess');
+        return;
+    }
+    lastGuessTime = now;
+    
+    const guessInput = document.getElementById('guessInput');
+    const rawGuess = guessInput.value.trim();
+    
+    // Validate and sanitize input
+    const validation = validateGuess(rawGuess);
+    if (!validation.valid) {
+        document.getElementById('feedback').textContent = validation.message;
+        return;
+    }
+    
+    const guess = validation.value;
+    turnCount++;
+    document.getElementById('turnCounter').textContent = turnCount;
+    
+    const guessArray = guess.split('').map(Number);
+    let correctCount = 0;
+    
+    for (let i = 0; i < codeLength; i++) {
+        if (guessArray[i] === secretCode[i]) {
+            correctCount++;
+        }
+    }
+    
+    // Track this guess in session history
+    const guessData = {
+        turnNumber: turnCount,
+        guess: guess,
+        correctCount: correctCount,
+        timestamp: now,
+        timeSinceStart: now - gameStartTime
+    };
+    gameSession.guessHistory.push(guessData);
+    
+    // Add to history table
+    const historyBody = document.getElementById('historyBody');
+    const row = historyBody.insertRow();
+    row.insertCell(0).textContent = turnCount;
+    row.insertCell(1).textContent = guess;
+    row.insertCell(2).textContent = correctCount;
+    
+    // Update feedback
+    const feedbackEl = document.getElementById('feedback');
+    if (correctCount === codeLength) {
+        gameEndTime = Date.now();
+        gameSession.endTime = gameEndTime;
+        const timeInSeconds = Math.floor((gameEndTime - gameStartTime) / 1000);
+        const score = calculateScore(codeLength, turnCount, timeInSeconds, true);
+        
+        feedbackEl.textContent = `Perfect! All ${correctCount} digits correct!`;
+        feedbackEl.className = 'feedback correct';
+        document.getElementById('winMessage').classList.remove('hidden');
+        gameWon = true;
+        
+        // Prepare comprehensive game result
+        currentGameResult = {
+            difficulty: codeLength,
+            attempts: turnCount,
+            timeInSeconds: timeInSeconds,
+            completed: true,
+            score: score,
+            secretCode: secretCode.join(''),
+            finalGuess: guess,
+            sessionData: gameSession
+        };
+        
+        // Save result immediately with universal system
+        setTimeout(async () => {
+            await saveGameResult();
+            await handleGameCompletion(currentGameResult);
+        }, 200);
+        
+    } else {
+        feedbackEl.textContent = `${correctCount} out of ${codeLength} digits correct.`;
+        feedbackEl.className = 'feedback';
+    }
+    
+    guessInput.value = '';
+    guessInput.focus();
+}
+
+// Handle game completion with modals
+async function handleGameCompletion(gameResult) {
+    if (currentUser && !isGuestMode) {
+        setTimeout(() => showSaveModal(), 500);
+    } else {
+        // Show guest sign up modal instead of alert
+        const shouldSignIn = await showModal('guestSignUpModal', { gameResult });
+        if (shouldSignIn) {
+            window.location.href = 'index.html';
+        }
+    }
+}
+
+// Enhanced newGame function with session tracking
+async function newGame() {
+    // Check if there's a game in progress
+    if (turnCount > 0 && !gameWon && gameStartTime) {
+        const confirmed = await showModal('newGameModal');
+        if (!confirmed) {
+            return; // User cancelled, don't start new game
+        }
+    }
+
+    const selectedLength = parseInt(document.getElementById('codeLength').value);
+    
+    if (selectedLength < 4 || selectedLength > 7) {
+        console.error('Invalid code length selected');
+        return;
+    }
+    
+    codeLength = selectedLength;
+    document.getElementById('guessInput').maxLength = codeLength;
+    
+    secretCode = [];
+    for (let i = 0; i < codeLength; i++) {
+        secretCode.push(Math.floor(Math.random() * 10));
+    }
+    
+    // Reset game state
+    turnCount = 0;
+    gameWon = false;
+    gameStartTime = Date.now();
+    gameEndTime = null;
+    currentGameResult = null;
+    
+    // Initialize session for this game
+    gameSession.startTime = gameStartTime;
+    gameSession.guessHistory = [];
+    
+    // UI updates
+    document.getElementById('turnCounter').textContent = turnCount;
+    document.getElementById('historyBody').innerHTML = '';
+    document.getElementById('feedback').textContent = `Game started! Guess the ${codeLength}-digit code.`;
+    document.getElementById('feedback').className = 'feedback';
+    document.getElementById('winMessage').classList.add('hidden');
+    document.getElementById('guessInput').value = '';
+    document.getElementById('guessInput').focus();
+    
+    initializeEliminationGrid();
+    
+    if (appConfig && appConfig.environment === 'development') {
+        console.log('Secret code:', secretCode.join(''));
+    }
+}
+
+// Auto-save on page unload (for incomplete games)
+window.addEventListener('beforeunload', function() {
+    if (gameStartTime && !gameWon && turnCount > 0) {
+        const abandonedData = {
+            user_id: currentUser ? currentUser.id : null,
+            session_id: gameSession.sessionId,
+            difficulty: codeLength,
+            attempts: turnCount,
+            time_taken: Math.floor((Date.now() - gameStartTime) / 1000),
+            completed: false,
+            score: 0,
+            is_guest: isGuestMode || !currentUser,
+            game_started_at: new Date(gameStartTime).toISOString(),
+            guess_history: gameSession.guessHistory,
+            device_info: gameSession.deviceInfo,
+            abandoned: true,
+            abandon_reason: 'page_unload',
+            status: 'abandoned',
+            created_at: new Date().toISOString()
+        };
+        
+        // Use sendBeacon for reliable sending on page unload
+        if (navigator.sendBeacon) {
+            const blob = new Blob([JSON.stringify(abandonedData)], { type: 'application/json' });
+            navigator.sendBeacon('/api/save-abandoned-game', blob);
+        } else {
+            saveToLocalStorage(abandonedData);
+        }
+    }
+});
+
+// Network status handling
+window.addEventListener('online', syncLocalBackup);
+window.addEventListener('offline', function() {
+    console.log('🔌 Offline mode - results will be saved locally');
+});
+
+// Load and display user data
+async function loadUserData() {
+    if (!supabase) {
+        console.warn('Supabase not initialized yet');
+        return;
+    }
+    
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const guestParam = urlParams.get('guest');
+        
+        if (guestParam === 'true') {
+            isGuestMode = true;
+            currentUser = null;
+            updateProfileDisplay(null, true);
+            return;
+        }
+
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error) {
+            console.error('Error getting user:', error);
+            isGuestMode = true;
+            updateProfileDisplay(null, true);
+            return;
+        }
+
+        if (user) {
+            isGuestMode = false;
+            currentUser = user;
+            updateProfileDisplay(user, false);
+        } else {
+            isGuestMode = true;
+            updateProfileDisplay(null, true);
+        }
+    } catch (error) {
+        console.error('Failed to load user data:', error);
+        isGuestMode = true;
+        updateProfileDisplay(null, true);
+    }
+}
+
+// Update profile display with user information
+function updateProfileDisplay(user, isGuestMode = false) {
+    const nameElement = document.getElementById('profileName');
+    const emailElement = document.getElementById('profileEmail');
+    const profileMenu = document.getElementById('profileMenu');
+
+    if (user && !isGuestMode) {
+        const displayName = user.user_metadata?.display_name || 
+                         user.user_metadata?.full_name || 
+                         user.email?.split('@')[0] || 
+                         'User';
+        nameElement.textContent = displayName;
+        emailElement.textContent = user.email || 'No email';
+        
+        profileMenu.innerHTML = `
+            <li class="profile-menu-item">
+                <button class="profile-menu-link" onclick="goToHub()">
+                    <span class="profile-menu-icon">🏠</span>
+                    <span>Hub</span>
+                </button>
+            </li>
+            <li class="profile-menu-item">
+                <button class="profile-menu-link" onclick="showDashboard()">
+                    <span class="profile-menu-icon">📊</span>
+                    <span>Dashboard</span>
+                </button>
+            </li>
+            <li class="profile-menu-item">
+                <button class="profile-menu-link danger" id="signOutButton" onclick="signOut()">
+                    <span class="profile-menu-icon">🚪</span>
+                    <span>Sign Out</span>
+                </button>
+            </li>
+        `;
+    } else {
+        nameElement.textContent = 'Guest User';
+        emailElement.innerHTML = `
+            Playing as Guest
+            <div class="guest-indicator">GUEST MODE</div>
+        `;
+        
+        profileMenu.innerHTML = `
+            <li class="profile-menu-item">
+                <button class="profile-menu-link" onclick="goToHub()">
+                    <span class="profile-menu-icon">🏠</span>
+                    <span>Hub</span>
+                </button>
+            </li>
+            <li class="profile-menu-item">
+                <button class="profile-menu-link primary" onclick="signInAsUser()">
+                    <span class="profile-menu-icon">🔑</span>
+                    <span>Sign In</span>
+                </button>
+            </li>
+        `;
+    }
+}
+
+// Profile Functions
+function toggleProfileDropdown() {
+    const dropdown = document.getElementById('profileDropdown');
+    dropdown.classList.toggle('show');
+}
+
+function goToHub() {
+    if (isGuestMode) {
+        window.location.href = 'hub.html?guest=true';
+    } else {
+        window.location.href = 'hub.html';
+    }
+}
+
+// Enhanced showDashboard with modal
 async function showDashboard() {
     if (isGuestMode) {
-        alert('Sign in to access your profile dashboard and track your progress!');
+        const shouldSignIn = await showModal('dashboardSignInModal');
+        if (shouldSignIn) {
+            window.location.href = 'index.html';
+        }
         toggleProfileDropdown();
         return;
     }
 
     if (!currentUser) {
-        alert('Please sign in to view your dashboard.');
+        const shouldSignIn = await showModal('dashboardSignInModal');
+        if (shouldSignIn) {
+            window.location.href = 'index.html';
+        }
         toggleProfileDropdown();
         return;
     }
@@ -2202,6 +3560,163 @@ async function showDashboard() {
     toggleProfileDropdown();
 }
 
+// Enhanced signOut with modal
+async function signOut() {
+    if (isSigningOut || !supabase) return;
+    
+    const confirmed = await showModal('signOutModal');
+    if (!confirmed) {
+        toggleProfileDropdown();
+        return;
+    }
+
+    isSigningOut = true;
+    
+    try {
+        const { error } = await supabase.auth.signOut({ scope: 'global' });
+        if (error) console.error('Supabase sign out error:', error);
+        
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.replace('index.html');
+    } catch (error) {
+        console.error('Error during sign out:', error);
+        window.location.replace('index.html');
+    } finally {
+        isSigningOut = false;
+    }
+}
+
+function signInAsUser() {
+    window.location.href = 'index.html';
+}
+
+// Calculate score based on difficulty, attempts, and time
+function calculateScore(difficulty, attempts, timeInSeconds, completed) {
+    if (!completed) return 0;
+    
+    const baseScore = difficulty * 250;
+    const attemptPenalty = Math.max(0, (attempts - difficulty) * 50);
+    const timePenalty = Math.min(timeInSeconds * 2, 300);
+    const difficultyBonus = difficulty * 100;
+    
+    return Math.max(baseScore - attemptPenalty - timePenalty + difficultyBonus, 100);
+}
+
+// Save modal functions
+function showSaveModal() {
+    if (!currentGameResult) return;
+    
+    const modal = document.getElementById('saveModal');
+    const statsDiv = document.getElementById('saveStats');
+    
+    const timeString = currentGameResult.timeInSeconds >= 60 ? 
+        `${Math.floor(currentGameResult.timeInSeconds / 60)}m ${currentGameResult.timeInSeconds % 60}s` :
+        `${currentGameResult.timeInSeconds}s`;
+    
+    statsDiv.innerHTML = `
+        <div><span>Difficulty:</span><span>${currentGameResult.difficulty} digits</span></div>
+        <div><span>Attempts:</span><span>${currentGameResult.attempts}</span></div>
+        <div><span>Time:</span><span>${timeString}</span></div>
+        <div><span>Your Score:</span><span>${currentGameResult.score.toLocaleString()}</span></div>
+    `;
+    
+    modal.classList.add('show');
+}
+
+function hideSaveModal() {
+    document.getElementById('saveModal').classList.remove('show');
+}
+
+// Enhanced saveResult with modal
+async function saveResult() {
+    if (!currentUser || isGuestMode) {
+        const shouldSignIn = await showModal('dashboardSignInModal');
+        if (shouldSignIn) {
+            window.location.href = 'index.html';
+        }
+        hideSaveModal();
+        return;
+    }
+    
+    hideSaveModal();
+    
+    const playAnother = await showModal('playAnotherModal');
+    if (playAnother) {
+        newGame();
+    }
+}
+
+// Enhanced confirmReset with modal
+async function confirmReset() {
+    if (turnCount > 0 && !gameWon) {
+        const confirmed = await showModal('resetGameModal');
+        if (confirmed) {
+            newGame();
+        }
+    } else {
+        newGame();
+    }
+}
+
+// Initialize elimination grid
+function initializeEliminationGrid() {
+    const grid = document.getElementById('eliminationGrid');
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = `auto repeat(${codeLength}, 1fr)`;
+    
+    eliminationState = {};
+    
+    const emptyCell = document.createElement('div');
+    emptyCell.className = 'grid-header';
+    grid.appendChild(emptyCell);
+    
+    for (let pos = 0; pos < codeLength; pos++) {
+        const header = document.createElement('div');
+        header.className = 'grid-header';
+        header.textContent = `P${pos + 1}`;
+        grid.appendChild(header);
+    }
+    
+    for (let digit = 0; digit <= 9; digit++) {
+        const rowHeader = document.createElement('div');
+        rowHeader.className = 'grid-row-header';
+        rowHeader.textContent = digit.toString();
+        grid.appendChild(rowHeader);
+        
+        for (let pos = 0; pos < codeLength; pos++) {
+            const cell = document.createElement('button');
+            cell.className = 'grid-cell';
+            cell.dataset.digit = digit;
+            cell.dataset.position = pos;
+            cell.onclick = () => toggleCell(digit, pos);
+            grid.appendChild(cell);
+            
+            eliminationState[`${digit}-${pos}`] = 'unknown';
+        }
+    }
+}
+
+function toggleCell(digit, position) {
+    const key = `${digit}-${position}`;
+    const cell = document.querySelector(`[data-digit="${digit}"][data-position="${position}"]`);
+    
+    if (eliminationState[key] === 'unknown') {
+        eliminationState[key] = 'no';
+        cell.className = 'grid-cell no';
+        cell.textContent = '✗';
+    } else if (eliminationState[key] === 'no') {
+        eliminationState[key] = 'yes';
+        cell.className = 'grid-cell yes';
+        cell.textContent = '✓';
+    } else {
+        eliminationState[key] = 'unknown';
+        cell.className = 'grid-cell';
+        cell.textContent = '';
+    }
+}
+
+// Dashboard Functions
 function hideDashboard() {
     document.getElementById('dashboardModal').classList.remove('show');
 }
@@ -2364,8 +3879,23 @@ function updateRecentGamesTable(games) {
     });
 }
 
-// Event Listeners for Dashboard
+// Event Listeners
 document.addEventListener('click', function(e) {
+    const profileContainer = document.querySelector('.profile-container');
+    const dropdown = document.getElementById('profileDropdown');
+    
+    if (profileContainer && !profileContainer.contains(e.target)) {
+        dropdown.classList.remove('show');
+    }
+
+    // Close modals when clicking overlay
+    if (e.target.classList.contains('modal-overlay')) {
+        const modalId = e.target.id;
+        const modalType = modalId.replace('Modal', '');
+        closeModal(modalType, false);
+    }
+
+    // Close dashboard when clicking overlay
     const dashboardModal = document.getElementById('dashboardModal');
     if (e.target === dashboardModal) {
         hideDashboard();
@@ -2374,12 +3904,37 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
+        // Close profile dropdown
+        document.getElementById('profileDropdown').classList.remove('show');
+        
+        // Close dashboard
         hideDashboard();
+        
+        // Close any visible modal
+        const visibleModal = document.querySelector('.modal-overlay.show');
+        if (visibleModal) {
+            const modalType = visibleModal.id.replace('Modal', '');
+            closeModal(modalType, false);
+        }
     }
 });
+
+// Enter key support
+document.addEventListener('DOMContentLoaded', function() {
+    const guessInput = document.getElementById('guessInput');
+    if (guessInput) {
+        guessInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitGuess();
+            }
+        });
+    }
+});
+
+// Initialize on page load
+window.addEventListener('load', initializeApp);
+
+console.log('🎮 Enhanced universal saving system with modals loaded and ready!');
 </script>
-
-
-
 </body>
 </html>

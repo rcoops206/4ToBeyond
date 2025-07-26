@@ -12,10 +12,7 @@
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.supabase.co https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://vitals.vercel-analytics.com; img-src 'self' data: https:;">
 
-    <!-- 🔧 SECURE CONFIG: Load configuration system FIRST -->
-    <script src="config-loader.js"></script>
-    
-    <!-- Supabase (loaded AFTER config) -->
+    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- Vercel Analytics -->
@@ -98,7 +95,7 @@
             display: flex;
         }
 
-        /* Environment badge (dev only) */
+        /* Environment badge */
         .env-badge {
             position: fixed;
             top: 10px;
@@ -525,7 +522,7 @@
         <div class="loading-subtext">Loading secure configuration...</div>
     </div>
 
-    <!-- Environment Badge (dev only) -->
+    <!-- Environment Badge -->
     <div id="envBadge" class="env-badge"></div>
 
     <!-- App Content -->
@@ -586,7 +583,92 @@
     </div>
 
     <script>
-        // 🔧 SECURE AUTHENTICATION MANAGER
+        // Configuration Loader
+        class ConfigLoader {
+            constructor() {
+                this.config = null;
+                this.loaded = false;
+            }
+
+            async loadConfig() {
+                if (this.loaded && this.config) {
+                    return this.config;
+                }
+
+                try {
+                    console.log('🔧 Loading configuration...');
+                    
+                    const hostname = window.location.hostname;
+                    const isProduction = hostname === 'lytic.co.uk' || hostname === 'www.lytic.co.uk';
+                    
+                    // Try to load from API first
+                    try {
+                        const apiUrl = isProduction 
+                            ? `${window.location.origin}/api/config`
+                            : 'http://localhost:3000/api/config';
+                            
+                        const response = await fetch(apiUrl, {
+                            method: 'GET',
+                            headers: { 'Accept': 'application/json' },
+                            signal: AbortSignal.timeout(10000)
+                        });
+
+                        if (response.ok) {
+                            const config = await response.json();
+                            if (this.validateConfig(config)) {
+                                this.config = config;
+                                this.loaded = true;
+                                console.log('✅ Configuration loaded from API');
+                                return this.config;
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('API config failed, using fallback:', error.message);
+                    }
+
+                    // Use fallback configuration
+                    this.config = this.getFallbackConfig();
+                    this.loaded = true;
+                    console.log('✅ Configuration loaded from fallback');
+                    return this.config;
+
+                } catch (error) {
+                    console.error('❌ Failed to load configuration:', error);
+                    throw error;
+                }
+            }
+
+            validateConfig(config) {
+                return config && 
+                       config.supabase && 
+                       config.supabase.url && 
+                       (config.supabase.anonKey || config.supabase.publishableKey);
+            }
+
+            getFallbackConfig() {
+                const hostname = window.location.hostname;
+                const isProduction = hostname === 'lytic.co.uk' || hostname === 'www.lytic.co.uk';
+                
+                return {
+                    supabase: {
+                        url: 'https://cbwtexsbwzflmgbwzvpp.supabase.co',
+                        anonKey: 'sb_publishable_fkRPbjI9oLx6ylOBB9Ryqw__ig_qRqX',
+                        publishableKey: 'sb_publishable_fkRPbjI9oLx6ylOBB9Ryqw__ig_qRqX'
+                    },
+                    features: {
+                        analytics: isProduction,
+                        debugging: !isProduction,
+                        guestMode: true,
+                        vercelAnalytics: isProduction
+                    },
+                    environment: isProduction ? 'production-fallback' : 'development-fallback',
+                    domain: hostname,
+                    timestamp: new Date().toISOString()
+                };
+            }
+        }
+
+        // Secure Authentication Manager
         class SecureAuthManager {
             constructor() {
                 this.mode = 'signin';
@@ -595,28 +677,85 @@
                 this.lockoutDuration = 15 * 60 * 1000; // 15 minutes
                 this.supabase = null;
                 this.appConfig = null;
+                this.initialized = false;
             }
 
-            // Initialize after config is loaded
             async initialize() {
-                // Wait for dependencies to be available
-                if (!window.supabase || !window.appConfig) {
-                    throw new Error('Supabase or app config not loaded');
+                if (this.initialized) {
+                    return;
                 }
-                
-                this.supabase = window.supabase;
-                this.appConfig = window.appConfig;
-                
-                // Check if user is already logged in
-                await this.checkExistingSession();
+
+                try {
+                    console.log('🔐 Initializing secure authentication...');
+                    
+                    // Load configuration
+                    const configLoader = new ConfigLoader();
+                    this.appConfig = await configLoader.loadConfig();
+                    
+                    // Wait for Supabase library to be available
+                    if (!window.supabase) {
+                        console.log('⏳ Waiting for Supabase library...');
+                        await this.waitForSupabase();
+                    }
+                    
+                    // Initialize Supabase client
+                    const apiKey = this.appConfig.supabase.publishableKey || this.appConfig.supabase.anonKey;
+                    
+                    this.supabase = window.supabase.createClient(
+                        this.appConfig.supabase.url,
+                        apiKey,
+                        {
+                            auth: {
+                                autoRefreshToken: true,
+                                persistSession: true,
+                                detectSessionInUrl: false
+                            }
+                        }
+                    );
+                    
+                    // Make globally available
+                    window.supabase = this.supabase;
+                    window.appConfig = this.appConfig;
+                    
+                    // Check existing session
+                    await this.checkExistingSession();
+                    
+                    this.initialized = true;
+                    console.log('✅ Authentication system ready');
+                    
+                } catch (error) {
+                    console.error('❌ Failed to initialize authentication:', error);
+                    throw error;
+                }
+            }
+
+            async waitForSupabase() {
+                return new Promise((resolve) => {
+                    let attempts = 0;
+                    const maxAttempts = 50; // 5 seconds max
+                    
+                    const checkSupabase = () => {
+                        attempts++;
+                        
+                        if (window.supabase) {
+                            resolve();
+                        } else if (attempts >= maxAttempts) {
+                            throw new Error('Supabase library failed to load');
+                        } else {
+                            setTimeout(checkSupabase, 100);
+                        }
+                    };
+                    
+                    checkSupabase();
+                });
             }
 
             async checkExistingSession() {
                 try {
                     const { data: { user }, error } = await this.supabase.auth.getUser();
                     
-                    if (error) {
-                        console.warn('Session check error:', error);
+                    if (error && !error.message.includes('session')) {
+                        console.warn('Session check warning:', error.message);
                         return;
                     }
                     
@@ -629,7 +768,6 @@
                 }
             }
 
-            // Input validation and sanitization
             validateInput(email, password, displayName = '') {
                 const errors = [];
                 
@@ -644,29 +782,16 @@
                     errors.push('Password must be between 8 and 128 characters');
                 }
                 
-                // Check for common weak passwords
-                const weakPasswords = ['password', '12345678', 'qwerty123', 'password123'];
-                if (weakPasswords.includes(password.toLowerCase())) {
-                    errors.push('Please choose a stronger password');
-                }
-                
                 // Display name validation (for signup)
                 if (this.mode === 'signup') {
                     if (!displayName.trim() || displayName.length > 50) {
                         errors.push('Display name is required and must be under 50 characters');
-                    }
-                    
-                    // Sanitize display name (remove potentially dangerous characters)
-                    const sanitizedName = displayName.replace(/[<>]/g, '').trim();
-                    if (sanitizedName !== displayName.trim()) {
-                        errors.push('Display name contains invalid characters');
                     }
                 }
                 
                 return { isValid: errors.length === 0, errors };
             }
 
-            // Rate limiting
             isRateLimited(email) {
                 try {
                     const attempts = localStorage.getItem(`auth_attempts_${email}`);
@@ -703,18 +828,20 @@
                 }
             }
 
-            // Show messages
             showError(message) {
                 const errorEl = document.getElementById('errorMessage');
                 const successEl = document.getElementById('successMessage');
                 
-                errorEl.textContent = message;
-                errorEl.style.display = 'block';
-                successEl.style.display = 'none';
+                if (errorEl) {
+                    errorEl.textContent = message;
+                    errorEl.style.display = 'block';
+                }
+                if (successEl) {
+                    successEl.style.display = 'none';
+                }
                 
-                // Auto-hide after 5 seconds
                 setTimeout(() => {
-                    errorEl.style.display = 'none';
+                    if (errorEl) errorEl.style.display = 'none';
                 }, 5000);
             }
 
@@ -722,37 +849,45 @@
                 const errorEl = document.getElementById('errorMessage');
                 const successEl = document.getElementById('successMessage');
                 
-                successEl.textContent = message;
-                successEl.style.display = 'block';
-                errorEl.style.display = 'none';
+                if (successEl) {
+                    successEl.textContent = message;
+                    successEl.style.display = 'block';
+                }
+                if (errorEl) {
+                    errorEl.style.display = 'none';
+                }
             }
 
-            // UI state management
             setProcessing(processing) {
                 this.isProcessing = processing;
                 const submitBtn = document.getElementById('authSubmit');
                 const buttons = document.querySelectorAll('.auth-button');
                 
                 if (processing) {
-                    submitBtn.disabled = true;
-                    submitBtn.classList.add('loading');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.classList.add('loading');
+                    }
                     buttons.forEach(btn => btn.disabled = true);
                 } else {
-                    submitBtn.disabled = false;
-                    submitBtn.classList.remove('loading');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.classList.remove('loading');
+                    }
                     buttons.forEach(btn => btn.disabled = false);
                 }
             }
 
-            // Authentication handlers
             async handleAuth(event) {
                 event.preventDefault();
                 
-                if (this.isProcessing) return;
+                if (this.isProcessing || !this.initialized) {
+                    return;
+                }
                 
-                const email = document.getElementById('email').value.trim();
-                const password = document.getElementById('password').value;
-                const displayName = document.getElementById('displayName').value.trim();
+                const email = document.getElementById('email')?.value?.trim() || '';
+                const password = document.getElementById('password')?.value || '';
+                const displayName = document.getElementById('displayName')?.value?.trim() || '';
 
                 // Validate inputs
                 const validation = this.validateInput(email, password, displayName);
@@ -785,6 +920,10 @@
             }
 
             async handleSignUp(email, password, displayName) {
+                if (!this.supabase) {
+                    throw new Error('Authentication system not ready');
+                }
+
                 const { data, error } = await this.supabase.auth.signUp({
                     email: email,
                     password: password,
@@ -806,6 +945,10 @@
             }
 
             async handleSignIn(email, password) {
+                if (!this.supabase) {
+                    throw new Error('Authentication system not ready');
+                }
+
                 const { data, error } = await this.supabase.auth.signInWithPassword({
                     email: email,
                     password: password
@@ -827,15 +970,17 @@
                     'Too many requests': 'Too many attempts. Please wait a moment and try again.',
                     'User already registered': 'An account with this email already exists. Try signing in instead.',
                     'Password should be at least 6 characters': 'Password must be at least 8 characters long.',
-                    'Network request failed': 'Network error. Please check your connection and try again.'
+                    'Network request failed': 'Network error. Please check your connection and try again.',
+                    'Authentication system not ready': 'Please wait a moment for the system to initialize.'
                 };
 
                 return errorMessages[error.message] || `Authentication error: ${error.message}`;
             }
 
-            // Modal management
             showModal(mode) {
-                if (this.isProcessing) return;
+                if (this.isProcessing || !this.initialized) {
+                    return;
+                }
                 
                 this.mode = mode;
                 
@@ -847,40 +992,54 @@
                 const switchBtn = document.getElementById('authSwitchBtn');
                 
                 // Clear any previous messages
-                document.getElementById('errorMessage').style.display = 'none';
-                document.getElementById('successMessage').style.display = 'none';
+                const errorMsg = document.getElementById('errorMessage');
+                const successMsg = document.getElementById('successMessage');
+                if (errorMsg) errorMsg.style.display = 'none';
+                if (successMsg) successMsg.style.display = 'none';
                 
                 if (mode === 'signup') {
-                    title.textContent = 'Create Account';
-                    displayNameField.style.display = 'block';
-                    displayNameField.required = true;
-                    submitBtn.textContent = 'Sign Up';
-                    switchText.textContent = 'Already have an account?';
-                    switchBtn.textContent = 'Sign In';
+                    if (title) title.textContent = 'Create Account';
+                    if (displayNameField) {
+                        displayNameField.style.display = 'block';
+                        displayNameField.required = true;
+                    }
+                    if (submitBtn) submitBtn.textContent = 'Sign Up';
+                    if (switchText) switchText.textContent = 'Already have an account?';
+                    if (switchBtn) switchBtn.textContent = 'Sign In';
                 } else {
-                    title.textContent = 'Sign In';
-                    displayNameField.style.display = 'none';
-                    displayNameField.required = false;
-                    submitBtn.textContent = 'Sign In';
-                    switchText.textContent = "Don't have an account?";
-                    switchBtn.textContent = 'Sign Up';
+                    if (title) title.textContent = 'Sign In';
+                    if (displayNameField) {
+                        displayNameField.style.display = 'none';
+                        displayNameField.required = false;
+                    }
+                    if (submitBtn) submitBtn.textContent = 'Sign In';
+                    if (switchText) switchText.textContent = "Don't have an account?";
+                    if (switchBtn) switchBtn.textContent = 'Sign Up';
                 }
                 
-                modal.classList.add('show');
-                
-                // Focus on email field
-                setTimeout(() => {
-                    document.getElementById('email').focus();
-                }, 100);
+                if (modal) {
+                    modal.classList.add('show');
+                    
+                    // Focus on email field
+                    setTimeout(() => {
+                        const emailField = document.getElementById('email');
+                        if (emailField) emailField.focus();
+                    }, 100);
+                }
             }
 
             hideModal() {
                 if (this.isProcessing) return;
                 
-                document.getElementById('authModal').classList.remove('show');
-                document.getElementById('authForm').reset();
-                document.getElementById('errorMessage').style.display = 'none';
-                document.getElementById('successMessage').style.display = 'none';
+                const modal = document.getElementById('authModal');
+                const form = document.getElementById('authForm');
+                const errorMsg = document.getElementById('errorMessage');
+                const successMsg = document.getElementById('successMessage');
+                
+                if (modal) modal.classList.remove('show');
+                if (form) form.reset();
+                if (errorMsg) errorMsg.style.display = 'none';
+                if (successMsg) successMsg.style.display = 'none';
             }
 
             toggleMode() {
@@ -899,168 +1058,151 @@
 
             redirectToHub(queryParams = '') {
                 // Add security check to prevent redirect attacks
-                const allowedRedirects = ['hub.html', './hub.html'];
-                const destination = 'hub.html' + queryParams;
-                
-                // Validate the destination
                 if (queryParams && !queryParams.startsWith('?')) {
                     console.warn('Invalid query parameters detected');
                     return;
                 }
                 
+                const destination = 'hub.html' + queryParams;
                 window.location.href = destination;
             }
         }
 
-        // Initialize secure authentication manager
-        const secureAuth = new SecureAuthManager();
+        // App Initializer
+        class AppInitializer {
+            constructor() {
+                this.initialized = false;
+            }
 
-        // Custom event listener for config ready
-        function waitForConfig() {
-            return new Promise((resolve) => {
-                // Check if config is already loaded
-                if (window.supabase && window.appConfig) {
-                    resolve();
-                    return;
-                }
+            async initialize() {
+                if (this.initialized) return;
 
-                // Listen for the custom event from config-loader.js
-                function handleConfigReady() {
-                    document.removeEventListener('lyticConfigReady', handleConfigReady);
-                    resolve();
-                }
-
-                document.addEventListener('lyticConfigReady', handleConfigReady);
-
-                // Fallback: poll for config availability
-                let attempts = 0;
-                const maxAttempts = 100; // 10 seconds max wait
-                
-                const pollInterval = setInterval(() => {
-                    attempts++;
+                try {
+                    console.log('🎮 Initializing Lytic...');
                     
-                    if (window.supabase && window.appConfig) {
-                        clearInterval(pollInterval);
-                        document.removeEventListener('lyticConfigReady', handleConfigReady);
-                        resolve();
-                    } else if (attempts >= maxAttempts) {
-                        clearInterval(pollInterval);
-                        document.removeEventListener('lyticConfigReady', handleConfigReady);
-                        resolve(); // Resolve anyway to show error
+                    this.updateLoadingState('Initializing authentication system...');
+                    
+                    // Initialize authentication
+                    window.secureAuth = new SecureAuthManager();
+                    await window.secureAuth.initialize();
+                    
+                    this.updateLoadingState('Finalizing setup...');
+                    
+                    // Show the app
+                    this.showApp();
+                    
+                    this.initialized = true;
+                    console.log('🚀 Lytic initialized successfully');
+                    
+                    // Dispatch ready event
+                    document.dispatchEvent(new CustomEvent('lyticConfigReady', {
+                        detail: { 
+                            supabase: window.secureAuth.supabase,
+                            config: window.secureAuth.appConfig 
+                        }
+                    }));
+                    
+                } catch (error) {
+                    console.error('❌ Failed to initialize app:', error);
+                    this.showError(error);
+                }
+            }
+
+            updateLoadingState(message) {
+                const loadingSubtext = document.querySelector('.loading-subtext');
+                if (loadingSubtext) {
+                    loadingSubtext.textContent = message;
+                }
+            }
+
+            showApp() {
+                const loadingScreen = document.getElementById('loadingScreen');
+                const appContent = document.getElementById('appContent');
+                
+                if (loadingScreen) {
+                    loadingScreen.style.display = 'none';
+                }
+                
+                if (appContent) {
+                    appContent.classList.add('ready');
+                }
+                
+                // Show environment badge in development
+                if (window.secureAuth?.appConfig?.environment?.includes('development')) {
+                    const envBadge = document.getElementById('envBadge');
+                    if (envBadge) {
+                        envBadge.textContent = `DEV MODE - ${window.secureAuth.appConfig.domain}`;
+                        envBadge.style.display = 'block';
                     }
-                }, 100);
+                }
+            }
+
+            showError(error) {
+                const loadingScreen = document.getElementById('loadingScreen');
+                if (loadingScreen) {
+                    loadingScreen.innerHTML = `
+                        <div style="text-align: center; color: white; max-width: 500px; padding: 2rem;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">🚧</div>
+                            <h2 style="margin-bottom: 1rem; color: #ffffff;">Lytic is starting up...</h2>
+                            <p style="margin-bottom: 2rem; color: rgba(255,255,255,0.7); line-height: 1.6;">
+                                We're setting up the secure environment. If this message persists, please refresh the page.
+                            </p>
+                            <button onclick="location.reload()" 
+                                    style="padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.3s ease;">
+                                Refresh Page
+                            </button>
+                            <details style="margin-top: 2rem; text-align: left;">
+                                <summary style="cursor: pointer; color: rgba(255,255,255,0.5); margin-bottom: 1rem;">Technical Details</summary>
+                                <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; font-size: 0.8rem; color: rgba(255,255,255,0.7); white-space: pre-wrap; word-wrap: break-word;">${error.message}</pre>
+                            </details>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // Global initialization
+        const appInitializer = new AppInitializer();
+
+        // Initialize when DOM is ready
+        function initializeApp() {
+            appInitializer.initialize().catch(error => {
+                console.error('Failed to initialize app:', error);
             });
         }
 
-        // App initialization with proper error handling
-        async function initializeApp() {
-            try {
-                console.log('🔐 Initializing secure authentication...');
-                
-                // Update loading text
-                const loadingText = document.querySelector('.loading-text');
-                const loadingSubtext = document.querySelector('.loading-subtext');
-                
-                if (loadingText) loadingText.textContent = 'Waiting for configuration...';
-                if (loadingSubtext) loadingSubtext.textContent = 'Please wait while we set up Lytic...';
-                
-                // Wait for config to be loaded
-                await waitForConfig();
-                
-                if (loadingText) loadingText.textContent = 'Initializing authentication...';
-                if (loadingSubtext) loadingSubtext.textContent = 'Setting up secure login system...';
-                
-                if (!window.supabase || !window.appConfig) {
-                    throw new Error('Failed to load Supabase configuration');
-                }
-                
-                // Initialize authentication manager
-                await secureAuth.initialize();
-                
-                // Show the app content
-                showApp();
-                
-                console.log('✅ Authentication system ready');
-                
-            } catch (error) {
-                console.error('❌ Failed to initialize authentication:', error);
-                showAppError(error);
-            }
-        }
-
-        function showApp() {
-            const loadingScreen = document.getElementById('loadingScreen');
-            const appContent = document.getElementById('appContent');
-            const envBadge = document.getElementById('envBadge');
-            
-            if (loadingScreen) {
-                loadingScreen.style.display = 'none';
-            }
-            
-            if (appContent) {
-                appContent.classList.add('ready');
-            }
-            
-            // Show environment badge in development
-            if (window.appConfig && window.appConfig.environment && 
-                window.appConfig.environment.includes('development')) {
-                envBadge.textContent = `DEV MODE - ${window.appConfig.domain || 'localhost'}`;
-                envBadge.style.display = 'block';
-            }
-        }
-
-        function showAppError(error) {
-            const loadingScreen = document.getElementById('loadingScreen');
-            if (loadingScreen) {
-                loadingScreen.innerHTML = `
-                    <div style="text-align: center; color: white; max-width: 500px; padding: 2rem;">
-                        <div style="font-size: 3rem; margin-bottom: 1rem;">🚧</div>
-                        <h2 style="margin-bottom: 1rem; color: #ffffff;">Lytic is starting up...</h2>
-                        <p style="margin-bottom: 2rem; color: rgba(255,255,255,0.7); line-height: 1.6;">
-                            We're setting up the secure environment. If this message persists, please refresh the page.
-                        </p>
-                        <button onclick="location.reload()" 
-                                style="padding: 12px 24px; background: #10b981; color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: all 0.3s ease;">
-                            Refresh Page
-                        </button>
-                        <details style="margin-top: 2rem; text-align: left;">
-                            <summary style="cursor: pointer; color: rgba(255,255,255,0.5); margin-bottom: 1rem;">Technical Details</summary>
-                            <pre style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; font-size: 0.8rem; color: rgba(255,255,255,0.7); white-space: pre-wrap; word-wrap: break-word;">${error.message}</pre>
-                        </details>
-                    </div>
-                `;
-            }
-        }
-
-        // Event listeners with security enhancements
+        // Event listeners
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize app
+            initializeApp();
+
             // Form submission handler
             const authForm = document.getElementById('authForm');
             if (authForm) {
-                authForm.addEventListener('submit', (e) => secureAuth.handleAuth(e));
+                authForm.addEventListener('submit', (e) => {
+                    if (window.secureAuth) {
+                        window.secureAuth.handleAuth(e);
+                    } else {
+                        e.preventDefault();
+                        console.warn('Authentication system not ready');
+                    }
+                });
             }
 
             // Modal interaction handlers
             const authModal = document.getElementById('authModal');
             if (authModal) {
                 authModal.addEventListener('click', (e) => {
-                    if (e.target === authModal) {
-                        secureAuth.hideModal();
+                    if (e.target === authModal && window.secureAuth) {
+                        window.secureAuth.hideModal();
                     }
                 });
             }
 
             // Keyboard handlers
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    secureAuth.hideModal();
-                }
-                
-                // Prevent certain dangerous key combinations
-                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'I') {
-                    if (window.appConfig && window.appConfig.environment === 'production') {
-                        e.preventDefault();
-                    }
+                if (e.key === 'Escape' && window.secureAuth) {
+                    window.secureAuth.hideModal();
                 }
             });
 
@@ -1070,99 +1212,23 @@
             }
         });
 
-        // Initialize app when page loads OR when config is ready
-        window.addEventListener('load', initializeApp);
-        
-        // Also listen for the config ready event in case it fires after load
-        document.addEventListener('lyticConfigReady', () => {
+        // Fallback initialization
+        window.addEventListener('load', () => {
             // Only initialize if not already done
-            if (!document.getElementById('appContent').classList.contains('ready')) {
+            if (!appInitializer.initialized) {
                 initializeApp();
             }
         });
 
-        // Enhanced security: Monitor for suspicious activity
-        let requestCount = 0;
-        let startTime = Date.now();
-
-        function monitorActivity() {
-            requestCount++;
-            
-            if (requestCount > 50 && (Date.now() - startTime) < 60000) {
-                console.warn('🚨 High activity detected');
-                // In production, you might want to temporarily disable certain features
-            }
-        }
-
-        // Override fetch to monitor requests
-        const originalFetch = window.fetch;
-        window.fetch = function(...args) {
-            monitorActivity();
-            return originalFetch.apply(this, args);
-        };
-
-        // Prevent common attacks
-        Object.freeze(Object.prototype);
-        
-        // Content Security Policy violation handler
-        document.addEventListener('securitypolicyviolation', (e) => {
-            console.warn('🚨 CSP Violation:', e.violatedDirective, e.sourceFile);
-            
-            // In production, you might want to report this to your security monitoring
-            if (window.appConfig && window.appConfig.environment === 'production') {
-                // Report to security service
-                // fetch('/api/security-violation', { method: 'POST', body: JSON.stringify(e) });
-            }
-        });
-
-        // Disable right-click in production (optional)
-        if (window.location.hostname === 'lytic.co.uk') {
-            document.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-            });
-        }
-
-        // Session monitoring
-        let lastActivity = Date.now();
-        const sessionTimeout = 30 * 60 * 1000; // 30 minutes
-
-        function resetActivity() {
-            lastActivity = Date.now();
-        }
-
-        function checkSession() {
-            if (Date.now() - lastActivity > sessionTimeout) {
-                console.log('Session timeout due to inactivity');
-                // Handle session timeout
-                if (window.supabase) {
-                    window.supabase.auth.signOut();
-                }
-            }
-        }
-
-        // Monitor user activity
-        ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
-            document.addEventListener(event, resetActivity, { passive: true });
-        });
-
-        // Check session every 5 minutes
-        setInterval(checkSession, 5 * 60 * 1000);
-
-        // Performance monitoring
-        window.addEventListener('load', () => {
-            if (window.performance && window.performance.timing) {
-                const loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
-                if (loadTime > 5000) {
-                    console.warn('⚠️ Slow page load detected:', loadTime + 'ms');
-                }
-            }
-        });
+        // Make secureAuth globally available for button onclick handlers
+        window.secureAuth = null; // Will be set during initialization
 
         // Export for debugging (development only)
-        if (window.appConfig && window.appConfig.environment && window.appConfig.environment.includes('development')) {
-            window.secureAuth = secureAuth;
-            console.log('🔧 Development mode: secureAuth available in console');
-        }
+        window.addEventListener('lyticConfigReady', () => {
+            if (window.secureAuth?.appConfig?.environment?.includes('development')) {
+                console.log('🔧 Development mode: secureAuth available in console');
+            }
+        });
     </script>
 </body>
-</html>  
+</html>

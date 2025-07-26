@@ -1,4 +1,4 @@
-// api/save-game.js - Vercel Serverless Function
+// api/save-game.js - Updated for New Supabase API Keys
 import { createClient } from '@supabase/supabase-js';
 
 // Rate limiting in memory (simple implementation)
@@ -103,17 +103,34 @@ export default async function handler(req, res) {
       });
     }
 
-    // Initialize Supabase
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+    // Initialize Supabase with NEW KEY FORMAT
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://cbwtexsbwzflmgbwzvpp.supabase.co';
+    
+    // Use NEW publishable key format (for client-like operations)
+    const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || 
+                       process.env.SUPABASE_ANON_KEY || 
+                       'sb_publishable_fkRPbjI9oLx6ylOBB9Ryqw__ig_qRqX';
+    
+    // Validate key format
+    if (!supabaseKey.startsWith('sb_publishable_') && !supabaseKey.startsWith('eyJ')) {
+      console.error('❌ Invalid Supabase key format');
+      return res.status(500).json({
+        error: 'Server configuration error',
+        message: 'Invalid API key format'
+      });
+    }
     
     if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase environment variables');
+      console.error('❌ Missing Supabase environment variables');
       return res.status(500).json({
         error: 'Server configuration error',
         message: 'Database credentials not configured'
       });
     }
+
+    // Log key format for debugging
+    const keyFormat = supabaseKey.startsWith('sb_publishable_') ? 'NEW' : 'LEGACY';
+    console.log(`🔑 Using ${keyFormat} API key format`);
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -124,7 +141,8 @@ export default async function handler(req, res) {
       session_id: sanitizedData.session_id,
       difficulty: sanitizedData.difficulty,
       completed: sanitizedData.completed,
-      is_guest: sanitizedData.is_guest
+      is_guest: sanitizedData.is_guest,
+      keyFormat: keyFormat
     });
 
     const { data, error } = await supabase
@@ -134,6 +152,14 @@ export default async function handler(req, res) {
 
     if (error) {
       console.error('❌ Supabase error saving game:', error);
+      
+      // Check for legacy key errors
+      if (error.message && error.message.includes('Legacy API keys')) {
+        return res.status(500).json({
+          error: 'API key format error',
+          message: 'Please update to new API key format'
+        });
+      }
       
       if (error.code === '23505') {
         return res.status(409).json({
@@ -154,7 +180,8 @@ export default async function handler(req, res) {
       success: true,
       message: 'Game saved successfully',
       id: data[0]?.id,
-      database: 'supabase'
+      database: 'supabase',
+      keyFormat: keyFormat
     });
 
   } catch (error) {

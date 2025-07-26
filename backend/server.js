@@ -3,6 +3,7 @@ const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
+const rateLimit = require('express-rate-limit'); // Add this import
 
 // Load .env from root directory (one level up from backend)
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
@@ -10,13 +11,25 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize Supabase client
+// Initialize Supabase client with NEW KEY FORMAT
 let supabase = null;
 try {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
   
+  // Use NEW publishable key format (with fallback to legacy for transition)
+  const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || 
+                     process.env.SUPABASE_ANON_KEY || 
+                     process.env.VITE_SUPABASE_ANON_KEY;
+  
+  // Validate key format
   if (supabaseUrl && supabaseKey) {
+    const keyFormat = supabaseKey.startsWith('sb_publishable_') ? 'NEW' : 'LEGACY';
+    console.log(`🔑 Using ${keyFormat} Supabase key format`);
+    
+    if (supabaseKey.startsWith('eyJ') && !supabaseKey.startsWith('sb_publishable_')) {
+      console.warn('⚠️ Using legacy JWT key - consider updating to new publishable key format');
+    }
+    
     supabase = createClient(supabaseUrl, supabaseKey);
     console.log('✅ Supabase client initialized');
   } else {
@@ -58,8 +71,6 @@ app.use((req, res, next) => {
 });
 
 // Rate limiting
-const rateLimit = require('express-rate-limit');
-
 const configLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: process.env.NODE_ENV === 'production' ? 5 : 10,
@@ -222,22 +233,32 @@ function sanitizeGuessHistory(guessHistory) {
 }
 
 // ============================================
-// Configuration API for lytic.co.uk
+// Configuration API for lytic.co.uk - UPDATED
 // ============================================
 
 const getConfig = () => {
   const environment = process.env.NODE_ENV || 'development';
   
+  // Get Supabase configuration with NEW key format support
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://cbwtexsbwzflmgbwzvpp.supabase.co';
+  
+  // Use NEW publishable key format (with fallback to legacy for transition)
+  const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || 
+                     process.env.SUPABASE_ANON_KEY || 
+                     process.env.VITE_SUPABASE_ANON_KEY;
+  
   // Check if we have the required environment variables
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-    console.warn('⚠️ Missing Supabase environment variables, using defaults');
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Missing Supabase environment variables');
+    return null;
   }
   
   const configs = {
     development: {
       supabase: {
-        url: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://cbwtexsbwzflmgbwzvpp.supabase.co',
-        anonKey: process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNid3RleHNid3pmbG1nYnd6dnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzNjU1MTUsImV4cCI6MjA2ODk0MTUxNX0.p4I1mFfNS6b23vYrmjFwSyqZ8_QEcwD_k1paY3iZbm0'
+        url: supabaseUrl,
+        anonKey: supabaseKey,
+        publishableKey: supabaseKey.startsWith('sb_publishable_') ? supabaseKey : undefined
       },
       features: {
         analytics: false,
@@ -249,12 +270,14 @@ const getConfig = () => {
       },
       apiUrl: process.env.API_URL || `http://localhost:${PORT}`,
       database: 'supabase',
-      domain: 'localhost'
+      domain: 'localhost',
+      keyFormat: supabaseKey.startsWith('sb_publishable_') ? 'new' : 'legacy'
     },
     production: {
       supabase: {
-        url: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-        anonKey: process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
+        url: supabaseUrl,
+        anonKey: supabaseKey,
+        publishableKey: supabaseKey.startsWith('sb_publishable_') ? supabaseKey : undefined
       },
       features: {
         analytics: true,
@@ -266,20 +289,21 @@ const getConfig = () => {
       },
       apiUrl: process.env.API_URL || 'https://lytic.co.uk',
       database: 'supabase',
-      domain: 'lytic.co.uk'
+      domain: 'lytic.co.uk',
+      keyFormat: supabaseKey.startsWith('sb_publishable_') ? 'new' : 'legacy'
     }
   };
 
   return configs[environment];
 };
 
-// Configuration endpoint
+// Configuration endpoint - UPDATED
 app.get('/api/config', configLimiter, (req, res) => {
   try {
     const config = getConfig();
     
     // Validate that we have required config
-    if (!config.supabase.url || !config.supabase.anonKey) {
+    if (!config || !config.supabase.url || !config.supabase.anonKey) {
       console.error('❌ Missing required Supabase configuration');
       return res.status(500).json({
         error: 'Server configuration error - missing Supabase credentials'
@@ -290,7 +314,8 @@ app.get('/api/config', configLimiter, (req, res) => {
     const publicConfig = {
       supabase: {
         url: config.supabase.url,
-        anonKey: config.supabase.anonKey
+        anonKey: config.supabase.anonKey,
+        publishableKey: config.supabase.publishableKey
       },
       features: config.features,
       apiUrl: config.apiUrl,
@@ -298,7 +323,8 @@ app.get('/api/config', configLimiter, (req, res) => {
       domain: config.domain,
       environment: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString(),
-      version: '1.0.0'
+      version: '2.0.0',
+      keyFormat: config.keyFormat
     };
 
     // Cache headers
@@ -310,6 +336,7 @@ app.get('/api/config', configLimiter, (req, res) => {
 
     console.log(`📡 Config served: ${publicConfig.environment} @ ${publicConfig.domain}`);
     console.log(`🔑 Using Supabase URL: ${publicConfig.supabase.url}`);
+    console.log(`🔑 Key format: ${publicConfig.keyFormat}`);
     res.json(publicConfig);
     
   } catch (error) {
@@ -320,7 +347,7 @@ app.get('/api/config', configLimiter, (req, res) => {
   }
 });
 
-// ===== NEW: Universal Game Saving API Endpoints =====
+// ===== GAME SAVING API ENDPOINTS (Updated with better error handling) =====
 
 // API endpoint for saving completed games
 app.post('/api/save-game', saveGameLimiter, validateGameData, async (req, res) => {
@@ -340,6 +367,14 @@ app.post('/api/save-game', saveGameLimiter, validateGameData, async (req, res) =
             
             if (error) {
                 console.error('❌ Supabase error saving game:', error);
+                
+                // Check for legacy key errors
+                if (error.message && error.message.includes('Legacy API keys')) {
+                    return res.status(500).json({
+                        error: 'API key format error',
+                        message: 'Please update to new API key format'
+                    });
+                }
                 
                 if (error.code === '23505') {
                     return res.status(409).json({
@@ -416,6 +451,15 @@ app.post('/api/save-abandoned-game', saveGameLimiter, validateGameData, async (r
             
             if (error) {
                 console.error('❌ Supabase error saving abandoned game:', error);
+                
+                // Check for legacy key errors
+                if (error.message && error.message.includes('Legacy API keys')) {
+                    return res.status(500).json({
+                        error: 'API key format error',
+                        message: 'Please update to new API key format'
+                    });
+                }
+                
                 return res.status(500).json({
                     error: 'Failed to save abandoned game',
                     message: 'Database error occurred'
@@ -562,12 +606,16 @@ app.post('/api/sync-backup-games', saveGameLimiter, async (req, res) => {
 
 // Health check endpoint (enhanced)
 app.get('/api/health', (req, res) => {
+  const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const keyFormat = supabaseKey?.startsWith('sb_publishable_') ? 'new' : 'legacy';
+  
   const envVars = {
     hasSupabaseUrl: !!process.env.SUPABASE_URL || !!process.env.VITE_SUPABASE_URL,
-    hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY || !!process.env.VITE_SUPABASE_ANON_KEY,
+    hasSupabaseKey: !!supabaseKey,
     supabaseConnected: !!supabase,
     nodeEnv: process.env.NODE_ENV || 'development',
-    port: PORT
+    port: PORT,
+    keyFormat: keyFormat
   };
 
   res.json({

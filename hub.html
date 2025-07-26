@@ -12,10 +12,7 @@
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.supabase.co https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://vitals.vercel-analytics.com; img-src 'self' data: https:; frame-ancestors 'none';">
 
-    <!-- 🔧 SECURE CONFIG: Load configuration system FIRST -->
-    <script src="config-loader.js"></script>
-    
-    <!-- Supabase (loaded AFTER config) -->
+    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- Vercel Analytics -->
@@ -314,15 +311,6 @@
         .profile-menu-link.loading {
             opacity: 0.6;
             pointer-events: none;
-        }
-
-        .loading-spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-top: 2px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
         }
 
         .guest-indicator {
@@ -943,6 +931,97 @@
     </div>
 
     <script>
+        // Simple API-based configuration loader
+        async function initializeLytic() {
+            try {
+                console.log('🏠 Loading Lytic Hub configuration...');
+                
+                // Load config from API
+                const response = await fetch('/api/config');
+                if (!response.ok) {
+                    throw new Error(`Config API failed: ${response.status}`);
+                }
+                
+                const config = await response.json();
+                console.log('📡 Configuration loaded:', config.environment);
+                
+                // Initialize Supabase
+                if (!window.supabase) {
+                    console.error('❌ Supabase library not loaded');
+                    throw new Error('Supabase library not available');
+                }
+                
+                window.appConfig = config;
+                
+                // Create Supabase client
+                window.supabase = window.supabase.createClient(
+                    config.supabase.url,
+                    config.supabase.anonKey
+                );
+                
+                console.log('✅ Supabase client initialized');
+                
+                // Test connection
+                const { data, error } = await window.supabase.auth.getSession();
+                if (error && !error.message.includes('session_not_found')) {
+                    console.warn('⚠️ Supabase connection issue:', error.message);
+                }
+                
+                console.log('🔗 Supabase connection tested');
+                
+                // Dispatch ready event
+                window.dispatchEvent(new CustomEvent('lyticConfigReady', {
+                    detail: { config, supabase: window.supabase }
+                }));
+                
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Configuration failed:', error);
+                
+                // Try fallback config
+                console.log('🔄 Attempting fallback configuration...');
+                
+                const fallbackConfig = {
+                    supabase: {
+                        url: 'https://cbwtexsbwzflmgbwzvpp.supabase.co',
+                        anonKey: 'sb_publishable_fkRPbjI9oLx6ylOBB9Ryqw__ig_qRqX'
+                    },
+                    features: {
+                        analytics: false,
+                        debugging: true,
+                        guestMode: true,
+                        localDatabase: true,
+                        vercelAnalytics: false,
+                        universalSaving: true
+                    },
+                    environment: 'fallback',
+                    database: 'supabase',
+                    domain: window.location.hostname,
+                    keyFormat: 'new'
+                };
+                
+                window.appConfig = fallbackConfig;
+                
+                if (window.supabase) {
+                    window.supabase = window.supabase.createClient(
+                        fallbackConfig.supabase.url,
+                        fallbackConfig.supabase.anonKey
+                    );
+                    
+                    console.log('✅ Fallback configuration successful');
+                    
+                    window.dispatchEvent(new CustomEvent('lyticConfigReady', {
+                        detail: { config: fallbackConfig, supabase: window.supabase }
+                    }));
+                    
+                    return true;
+                } else {
+                    throw new Error('Supabase library not available for fallback');
+                }
+            }
+        }
+
         // 🔧 SECURE HUB MANAGER
         class SecureHubManager {
             constructor() {
@@ -1353,7 +1432,10 @@
             try {
                 console.log('🏠 Initializing Lytic Hub...');
                 
-                // Wait for config to be loaded by config-loader.js
+                // Initialize configuration
+                await initializeLytic();
+                
+                // Wait for config to be fully loaded
                 let attempts = 0;
                 while ((!window.supabase || !window.appConfig) && attempts < 50) {
                     await new Promise(resolve => setTimeout(resolve, 100));
@@ -1546,6 +1628,9 @@
                 e.preventDefault();
             });
         }
+
+        // Make secureAuth globally available
+        window.secureAuth = null;
 
         // Export for debugging (development only)
         if (window.appConfig && window.appConfig.environment && window.appConfig.environment.includes('development')) {

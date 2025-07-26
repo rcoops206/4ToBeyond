@@ -2684,7 +2684,7 @@
                 <button id="submitBtn" onclick="submitGuess()" class="btn btn-primary">Submit</button>
             </div>
             <div id="feedback" class="feedback">
-                Select a code length and start a new game!
+                Select a code length and click "New Game" to start playing!
             </div>
         </div>
 
@@ -2851,6 +2851,7 @@ let eliminationState = {};
 let gameStartTime = null;
 let gameEndTime = null;
 let currentGameResult = null;
+let gameStarted = false; 
 
 // Enhanced game variables with tracking
 let gameSession = {
@@ -3233,6 +3234,13 @@ function updateLocalStatsCache(gameData) {
 
 // Enhanced submitGuess with detailed tracking and universal saving
 function submitGuess() {
+    // Check if game has been started
+    if (!gameStarted) {
+        document.getElementById('feedback').textContent = 'Please start a new game first!';
+        document.getElementById('feedback').className = 'feedback';
+        return;
+    }
+    
     if (gameWon) return;
     
     // Rate limiting
@@ -3364,6 +3372,7 @@ async function newGame() {
     // Reset game state
     turnCount = 0;
     gameWon = false;
+    gameStarted = true;
     gameStartTime = Date.now();
     gameEndTime = null;
     currentGameResult = null;

@@ -33,6 +33,11 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0a0a0a;
@@ -41,7 +46,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
             position: relative;
         }
 
@@ -87,12 +91,19 @@
         }
 
         .app-content {
-            display: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             width: 100%;
+            min-height: 100vh;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
         }
 
         .app-content.ready {
-            display: flex;
+            opacity: 1;
+            visibility: visible;
         }
 
         /* Environment badge */
@@ -193,6 +204,10 @@
             padding: 2rem;
             position: relative;
             z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         .title {
@@ -224,6 +239,7 @@
             flex-direction: column;
             gap: 1.5rem;
             width: 100%;
+            max-width: 400px;
         }
 
         .auth-button {
@@ -501,6 +517,7 @@
         @media (max-width: 640px) {
             .main-container {
                 padding: 1rem;
+                max-width: 90vw;
             }
             
             .auth-button {
@@ -510,6 +527,26 @@
 
             .auth-content {
                 padding: 2rem;
+                margin: 1rem;
+            }
+
+            .title {
+                margin-bottom: 3rem;
+            }
+        }
+
+        @media (max-height: 600px) {
+            .main-container {
+                padding: 1rem;
+            }
+            
+            .title {
+                margin-bottom: 2rem;
+                font-size: clamp(2.5rem, 8vw, 4rem);
+            }
+            
+            .auth-options {
+                gap: 1rem;
             }
         }
     </style>

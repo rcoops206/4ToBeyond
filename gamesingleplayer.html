@@ -560,9 +560,15 @@
             document.getElementById('feedback').textContent = `Game started! Guess the ${codeLength}-digit code.`;
             document.getElementById('feedback').className = 'feedback';
             document.getElementById('winMessage').classList.add('hidden');
-            document.getElementById('guessInput').value = '';
-            document.getElementById('guessInput').focus();
-            
+
+            // Enable input and button
+            const guessInput = document.getElementById('guessInput');
+            const submitBtn = document.getElementById('submitBtn');
+            guessInput.disabled = false;
+            guessInput.placeholder = 'Enter your guess';
+            guessInput.value = '';
+            guessInput.focus();
+            submitBtn.disabled = false;
             initializeEliminationGrid();
             
             if (appConfig && appConfig.environment === 'development') {
@@ -1139,6 +1145,24 @@
     <script defer src="/_vercel/insights/script.js"></script>
 
     <style>
+
+
+
+    /* Disabled input styling */
+    .guess-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: rgba(15, 23, 42, 0.4) !important;
+    
+    }
+
+    .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    
+    }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -3935,12 +3959,22 @@ document.addEventListener('keydown', function(e) {
 // Enter key support
 document.addEventListener('DOMContentLoaded', function() {
     const guessInput = document.getElementById('guessInput');
+    const submitBtn = document.getElementById('submitBtn');
+    
     if (guessInput) {
+        // Initially disable input and button
+        guessInput.disabled = true;
+        guessInput.placeholder = 'Click "New Game" to start!';
+        
         guessInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 submitGuess();
             }
         });
+    }
+    
+    if (submitBtn) {
+        submitBtn.disabled = true;
     }
 });
 

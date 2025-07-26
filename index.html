@@ -10,7 +10,7 @@
     <meta http-equiv="X-Frame-Options" content="DENY">
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.supabase.co https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://vitals.vercel-analytics.com; img-src 'self' data: https:; frame-ancestors 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.supabase.co https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://vitals.vercel-analytics.com; img-src 'self' data: https:;">
 
     <!-- 🔧 SECURE CONFIG: Load configuration system FIRST -->
     <script src="config-loader.js"></script>
@@ -599,6 +599,7 @@
 
             // Initialize after config is loaded
             async initialize() {
+                // Wait for dependencies to be available
                 if (!window.supabase || !window.appConfig) {
                     throw new Error('Supabase or app config not loaded');
                 }
@@ -914,17 +915,60 @@
         // Initialize secure authentication manager
         const secureAuth = new SecureAuthManager();
 
+        // Custom event listener for config ready
+        function waitForConfig() {
+            return new Promise((resolve) => {
+                // Check if config is already loaded
+                if (window.supabase && window.appConfig) {
+                    resolve();
+                    return;
+                }
+
+                // Listen for the custom event from config-loader.js
+                function handleConfigReady() {
+                    document.removeEventListener('lyticConfigReady', handleConfigReady);
+                    resolve();
+                }
+
+                document.addEventListener('lyticConfigReady', handleConfigReady);
+
+                // Fallback: poll for config availability
+                let attempts = 0;
+                const maxAttempts = 100; // 10 seconds max wait
+                
+                const pollInterval = setInterval(() => {
+                    attempts++;
+                    
+                    if (window.supabase && window.appConfig) {
+                        clearInterval(pollInterval);
+                        document.removeEventListener('lyticConfigReady', handleConfigReady);
+                        resolve();
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(pollInterval);
+                        document.removeEventListener('lyticConfigReady', handleConfigReady);
+                        resolve(); // Resolve anyway to show error
+                    }
+                }, 100);
+            });
+        }
+
         // App initialization with proper error handling
         async function initializeApp() {
             try {
                 console.log('🔐 Initializing secure authentication...');
                 
-                // Wait for config to be loaded by config-loader.js
-                let attempts = 0;
-                while ((!window.supabase || !window.appConfig) && attempts < 50) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    attempts++;
-                }
+                // Update loading text
+                const loadingText = document.querySelector('.loading-text');
+                const loadingSubtext = document.querySelector('.loading-subtext');
+                
+                if (loadingText) loadingText.textContent = 'Waiting for configuration...';
+                if (loadingSubtext) loadingSubtext.textContent = 'Please wait while we set up Lytic...';
+                
+                // Wait for config to be loaded
+                await waitForConfig();
+                
+                if (loadingText) loadingText.textContent = 'Initializing authentication...';
+                if (loadingSubtext) loadingSubtext.textContent = 'Setting up secure login system...';
                 
                 if (!window.supabase || !window.appConfig) {
                     throw new Error('Failed to load Supabase configuration');
@@ -1026,8 +1070,16 @@
             }
         });
 
-        // Initialize app when page loads
+        // Initialize app when page loads OR when config is ready
         window.addEventListener('load', initializeApp);
+        
+        // Also listen for the config ready event in case it fires after load
+        document.addEventListener('lyticConfigReady', () => {
+            // Only initialize if not already done
+            if (!document.getElementById('appContent').classList.contains('ready')) {
+                initializeApp();
+            }
+        });
 
         // Enhanced security: Monitor for suspicious activity
         let requestCount = 0;
@@ -1113,4 +1165,4 @@
         }
     </script>
 </body>
-</html>
+</html>  

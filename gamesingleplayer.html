@@ -1720,29 +1720,7 @@
             font-weight: 400;
         }
         
-        .game-setup {
-            background: rgba(30, 41, 59, 0.8);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-            flex-wrap: nowrap;
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(12px);
-        }
-        
-        .setup-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 1;
-        }
+       
         
         label {
             font-size: 14px;
@@ -2153,6 +2131,182 @@
         .reset-container {
             text-align: center;
         }
+        
+
+        /* Reset Button in Top Left */
+.reset-nav {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1000;
+}
+
+.reset-button {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    padding: 12px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reset-button:hover {
+    background: rgba(239, 68, 68, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5);
+}
+
+/* Game Setup Modal */
+.game-setup-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 1rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.game-setup-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.setup-content {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 24px;
+    padding: 2.5rem;
+    max-width: 450px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+    transform: scale(0.8);
+    transition: transform 0.3s ease;
+}
+
+.game-setup-modal.show .setup-content {
+    transform: scale(1);
+}
+
+.setup-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 2.5rem;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+.setup-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-bottom: 0.5rem;
+}
+
+.setup-subtitle {
+    color: rgba(226, 232, 240, 0.7);
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.setup-form {
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 0.5rem;
+}
+
+.form-select {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid rgba(148, 163, 184, 0.3);
+    border-radius: 12px;
+    font-size: 16px;
+    background: rgba(30, 41, 59, 0.8);
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+.form-select option {
+    background: #1e293b;
+    color: #e2e8f0;
+}
+
+.difficulty-preview {
+    background: rgba(30, 41, 59, 0.6);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+.difficulty-text {
+    font-size: 0.9rem;
+    color: rgba(226, 232, 240, 0.8);
+    margin-bottom: 0.5rem;
+}
+
+.difficulty-indicator {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.difficulty-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(148, 163, 184, 0.4);
+    transition: all 0.3s ease;
+}
+
+.difficulty-dot.active {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+}
+
+.setup-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
 
         /* Dashboard Modal Styles */
         .dashboard-modal {
@@ -2687,19 +2841,7 @@
             <p class="subtitle">Crack the code with perfect precision</p>
         </div>
 
-        <!-- Game Setup -->
-        <div class="game-setup">
-            <div class="setup-group">
-                <label for="codeLength">Code Length:</label>
-                <select id="codeLength">
-                    <option value="4">4 digits</option>
-                    <option value="5">5 digits</option>
-                    <option value="6">6 digits</option>
-                    <option value="7">7 digits</option>
-                </select>
-            </div>
-            <button onclick="newGame()" class="btn btn-primary">New Game</button>
-        </div>
+        
 
         <!-- Input Section -->
         <div class="input-section">
@@ -2758,10 +2900,7 @@
             🎉 VICTORY! You cracked the code! 🎉
         </div>
 
-        <!-- Reset Button -->
-        <div class="reset-container">
-            <button onclick="confirmReset()" class="btn btn-secondary">Reset Game</button>
-        </div>
+        
     </div>
 
     <!-- Dashboard Modal -->
@@ -2848,6 +2987,48 @@
 </div>
 </div>
 
+
+<!-- Reset Button in Top Left -->
+<div class="reset-nav">
+    <button class="reset-button" onclick="showGameSetup()">
+        🔄 <span>Reset</span>
+    </button>
+</div>
+
+<!-- Game Setup Modal -->
+<div class="game-setup-modal" id="gameSetupModal">
+    <div class="setup-content">
+        <div class="setup-icon">🎯</div>
+        <h2 class="setup-title">Start New Game</h2>
+        <p class="setup-subtitle">Choose your difficulty level and crack the code!</p>
+        
+        <div class="setup-form">
+            <div class="form-group">
+                <label class="form-label" for="setupCodeLength">Difficulty Level</label>
+                <select id="setupCodeLength" class="form-select" onchange="updateDifficultyPreview()">
+                    <option value="4">Easy - 4 Digits</option>
+                    <option value="5">Medium - 5 Digits</option>
+                    <option value="6">Hard - 6 Digits</option>
+                    <option value="7">Expert - 7 Digits</option>
+                </select>
+                <div class="difficulty-preview">
+                    <div class="difficulty-text" id="difficultyText">Perfect for beginners</div>
+                    <div class="difficulty-indicator" id="difficultyIndicator">
+                        <div class="difficulty-dot active"></div>
+                        <div class="difficulty-dot"></div>
+                        <div class="difficulty-dot"></div>
+                        <div class="difficulty-dot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="setup-actions">
+            <button class="btn btn-confirm" onclick="startNewGameFromModal()">Start Game</button>
+        </div>
+    </div>
+</div>
+
 <!-- Error State -->
 <div id="errorState" class="error-state" style="display: none;">
     <div class="error-icon">⚠️</div>
@@ -2875,7 +3056,7 @@ let eliminationState = {};
 let gameStartTime = null;
 let gameEndTime = null;
 let currentGameResult = null;
-let gameStarted = false; 
+
 
 // Enhanced game variables with tracking
 let gameSession = {
@@ -2892,6 +3073,63 @@ const GUESS_COOLDOWN = 500;
 
 // Modal System
 let modalResolvers = {};
+
+
+
+
+// Show game setup modal
+function showGameSetup() {
+    const modal = document.getElementById('gameSetupModal');
+    modal.classList.add('show');
+    updateDifficultyPreview();
+    
+    // Focus the select element
+    setTimeout(() => {
+        document.getElementById('setupCodeLength').focus();
+    }, 100);
+}
+
+// Hide game setup modal
+function hideGameSetup() {
+    const modal = document.getElementById('gameSetupModal');
+    modal.classList.remove('show');
+}
+
+// Update difficulty preview in modal
+function updateDifficultyPreview() {
+    const select = document.getElementById('setupCodeLength');
+    const selectedValue = parseInt(select.value);
+    const difficultyText = document.getElementById('difficultyText');
+    const difficultyIndicator = document.getElementById('difficultyIndicator');
+    
+    const difficulties = {
+        4: { text: 'Perfect for beginners', dots: 1 },
+        5: { text: 'Moderate challenge', dots: 2 },
+        6: { text: 'Tough but manageable', dots: 3 },
+        7: { text: 'Expert level difficulty', dots: 4 }
+    };
+    
+    const difficulty = difficulties[selectedValue];
+    difficultyText.textContent = difficulty.text;
+    
+    // Update difficulty dots
+    const dots = difficultyIndicator.querySelectorAll('.difficulty-dot');
+    dots.forEach((dot, index) => {
+        if (index < difficulty.dots) {
+            dot.classList.add('active');
+        } else {
+            dot.classList.remove('active');
+        }
+    });
+}
+
+// Start new game from modal
+function startNewGameFromModal() {
+    const selectedLength = parseInt(document.getElementById('setupCodeLength').value);
+    hideGameSetup();
+    newGame(selectedLength);
+}
+
 
 // Initialize session tracking
 function initializeGameSession() {
@@ -3012,6 +3250,10 @@ async function initializeApp() {
         
         // Load user data
         await loadUserData();
+
+        setTimeout(() => {
+            showGameSetup();
+        }, 500);        
         
         // Background sync of any pending backup data
         setTimeout(async () => {
@@ -3258,12 +3500,7 @@ function updateLocalStatsCache(gameData) {
 
 // Enhanced submitGuess with detailed tracking and universal saving
 function submitGuess() {
-    // Check if game has been started
-    if (!gameStarted) {
-        document.getElementById('feedback').textContent = 'Please start a new game first!';
-        document.getElementById('feedback').className = 'feedback';
-        return;
-    }
+    
     
     if (gameWon) return;
     
@@ -3368,8 +3605,8 @@ async function handleGameCompletion(gameResult) {
     }
 }
 
-// Enhanced newGame function with session tracking
-async function newGame() {
+// REPLACE the entire existing newGame function with this:
+async function newGame(selectedLength = null) {
     // Check if there's a game in progress
     if (turnCount > 0 && !gameWon && gameStartTime) {
         const confirmed = await showModal('newGameModal');
@@ -3378,15 +3615,18 @@ async function newGame() {
         }
     }
 
-    const selectedLength = parseInt(document.getElementById('codeLength').value);
+    // Use provided length or default to 4
+    codeLength = selectedLength || 4;
     
-    if (selectedLength < 4 || selectedLength > 7) {
+    if (codeLength < 4 || codeLength > 7) {
         console.error('Invalid code length selected');
         return;
     }
     
-    codeLength = selectedLength;
-    document.getElementById('guessInput').maxLength = codeLength;
+    const guessInput = document.getElementById('guessInput');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    guessInput.maxLength = codeLength;
     
     secretCode = [];
     for (let i = 0; i < codeLength; i++) {
@@ -3411,8 +3651,13 @@ async function newGame() {
     document.getElementById('feedback').textContent = `Game started! Guess the ${codeLength}-digit code.`;
     document.getElementById('feedback').className = 'feedback';
     document.getElementById('winMessage').classList.add('hidden');
-    document.getElementById('guessInput').value = '';
-    document.getElementById('guessInput').focus();
+    
+    // Enable input and button
+    guessInput.disabled = false;
+    guessInput.placeholder = 'Enter your guess';
+    guessInput.value = '';
+    guessInput.focus();
+    submitBtn.disabled = false;
     
     initializeEliminationGrid();
     
@@ -3684,17 +3929,7 @@ async function saveResult() {
     }
 }
 
-// Enhanced confirmReset with modal
-async function confirmReset() {
-    if (turnCount > 0 && !gameWon) {
-        const confirmed = await showModal('resetGameModal');
-        if (confirmed) {
-            newGame();
-        }
-    } else {
-        newGame();
-    }
-}
+
 
 // Initialize elimination grid
 function initializeEliminationGrid() {
@@ -3932,6 +4167,10 @@ document.addEventListener('click', function(e) {
         closeModal(modalType, false);
     }
 
+ if (e.target.classList.contains('game-setup-modal')) {
+        hideGameSetup();
+    }
+
     // Close dashboard when clicking overlay
     const dashboardModal = document.getElementById('dashboardModal');
     if (e.target === dashboardModal) {
@@ -3946,6 +4185,9 @@ document.addEventListener('keydown', function(e) {
         
         // Close dashboard
         hideDashboard();
+
+        // Close game setup modal
+        hideGameSetup();
         
         // Close any visible modal
         const visibleModal = document.querySelector('.modal-overlay.show');

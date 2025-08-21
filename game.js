@@ -939,21 +939,24 @@ function calculateUserStats(gameResults) {
     const totalGames = gameResults.length;
     const completedGames = gameResults.filter(game => game.completed);
     const gamesWon = completedGames.length;
-    const winRate = totalGames > 0 ? Math.round((gamesWon / totalGames) * 100) : 0;
     const bestScore = gameResults.length > 0 ? Math.max(...gameResults.map(g => g.score || 0)) : 0;
+    
+    // Calculate best (lowest) attempts from completed games only
+    const bestAttempts = completedGames.length > 0 ? 
+        Math.min(...completedGames.map(game => game.attempts)) : null;
     
     const avgAttempts = completedGames.length > 0 ? 
         (completedGames.reduce((sum, game) => sum + game.attempts, 0) / completedGames.length).toFixed(1) : 0;
     const avgTime = completedGames.length > 0 ? 
         Math.round(completedGames.reduce((sum, game) => sum + game.time_taken, 0) / completedGames.length) : 0;
 
-    return { totalGames, gamesWon, winRate, bestScore, avgAttempts, avgTime };
+    return { totalGames, gamesWon, bestScore, bestAttempts, avgAttempts, avgTime };
 }
 
 function updateStatsDisplay(stats) {
     document.getElementById('totalGames').textContent = stats.totalGames;
     document.getElementById('gamesWon').textContent = stats.gamesWon;
-    document.getElementById('winRate').textContent = stats.winRate + '%';
+    document.getElementById('bestAttempts').textContent = stats.bestAttempts !== null ? stats.bestAttempts : '--';
     document.getElementById('bestScore').textContent = stats.bestScore.toLocaleString();
     document.getElementById('avgAttempts').textContent = stats.avgAttempts;
     document.getElementById('avgTime').textContent = stats.avgTime + 's';

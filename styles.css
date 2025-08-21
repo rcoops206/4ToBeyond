@@ -838,7 +838,7 @@ body::before {
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    padding: 1rem;
+    padding: 20px;
 }
 
 .save-modal.show {
@@ -850,8 +850,8 @@ body::before {
     border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 24px;
     padding: 3rem;
-    max-width: 400px;
     width: 100%;
+    max-width: 400px;
     text-align: center;
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
 }
@@ -903,6 +903,7 @@ body::before {
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
+    padding: 20px;
 }
 
 .modal-overlay.show {
@@ -915,14 +916,15 @@ body::before {
     backdrop-filter: blur(20px);
     border: 1px solid rgba(148, 163, 184, 0.3);
     border-radius: 24px;
-    min-width: 400px;
+    width: 100%;
     max-width: 500px;
-    margin: 20px;
+    min-width: 320px;
     transform: scale(0.8);
     transition: transform 0.3s ease;
     overflow: hidden;
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
     padding: 0;
+    position: relative;
 }
 
 .modal-overlay.show .modal {
@@ -1028,7 +1030,7 @@ body::before {
     align-items: center;
     justify-content: center;
     z-index: 3000;
-    padding: 1rem;
+    padding: 20px;
     overflow-y: auto;
 }
 
@@ -1041,12 +1043,13 @@ body::before {
     border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 24px;
     padding: 2rem;
-    max-width: 900px;
     width: 100%;
-    max-height: 90vh;
+    max-width: 900px;
+    max-height: calc(100vh - 40px);
     overflow-y: auto;
     box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
     position: relative;
+    margin: auto;
 }
 
 .dashboard-header {
@@ -1301,9 +1304,13 @@ body::before {
         font-size: 12px;
     }
 
+    .modal-overlay {
+        padding: 15px;
+    }
+
     .modal-overlay .modal {
-        min-width: 320px;
-        margin: 20px;
+        min-width: unset;
+        max-width: 100%;
     }
     
     .modal-footer {
@@ -1315,8 +1322,8 @@ body::before {
     }
 
     .dashboard-content {
-        margin: 0.5rem;
         padding: 1.5rem;
+        max-height: calc(100vh - 30px);
     }
 
     .stats-grid {
@@ -1375,10 +1382,34 @@ body::before {
     .stats-grid {
         grid-template-columns: 1fr;
     }
+
+    .modal-header {
+        padding: 24px 24px 16px;
+    }
+
+    .modal-footer {
+        padding: 0 24px 24px;
+    }
+
+    .setup-content {
+        padding: 2rem;
+    }
 }
 
 @media (max-width: 400px) {
     .guess-input::placeholder {
         content: "Guess";
+    }
+
+    .modal-overlay {
+        padding: 10px;
+    }
+
+    .dashboard-content {
+        padding: 1rem;
+    }
+
+    .save-content {
+        padding: 2rem;
     }
 }

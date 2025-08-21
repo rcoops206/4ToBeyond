@@ -1069,19 +1069,32 @@
 
 <!-- Add this footer to your main game HTML -->
 
-
 <footer class="legal-footer">
-  <div class="footer-content">
-      <div class="footer-links">
-          <a href="privacy.html">Privacy Policy</a>
-          <a href="terms.html">Terms of Service</a>
-          <a href="contact.html">Contact & About</a>
-      </div>
-      <p class="footer-text">&copy; 2025 LYTIC Game. All rights reserved.</p>
-  </div>
-</footer>
+    <div class="footer-content">
+        <div class="footer-links">
+            <a href="privacy.html">Privacy Policy</a>
+            <a href="terms.html">Terms of Service</a>
+            <a href="contact.html">Contact & About</a>
+        </div>
+        <p class="footer-text">&copy; 2025 LYTIC Game. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
 
 <style>
+/* Make body take full height and use flex */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+
+/* Push footer to bottom */
+.page-content {
+    flex: 1;
+}
+
 /* Footer Container */
 .legal-footer {
     width: 100%;

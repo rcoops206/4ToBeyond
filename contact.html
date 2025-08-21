@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact & About - LYTIC Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0a0a;
+            color: #e5e5e5;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .back-link:hover {
+            color: #60a5fa;
+        }
+        
+        h1 {
+            color: #ffffff;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        h2 {
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 30px 0 15px 0;
+            border-bottom: 2px solid #1f2937;
+            padding-bottom: 8px;
+        }
+        
+        p {
+            color: #9ca3af;
+            margin-bottom: 15px;
+            font-size: 1rem;
+        }
+        
+        ul {
+            margin-bottom: 15px;
+            padding-left: 25px;
+        }
+        
+        li {
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+        
+        .highlight {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-left: 4px solid #3b82f6;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        
+        .contact-card {
+            background: #111111;
+            border: 1px solid #374151;
+            padding: 25px;
+            border-radius: 16px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        
+        .contact-method {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0;
+            padding: 15px;
+            background: #0a0a0a;
+            border-radius: 8px;
+            border: 1px solid #374151;
+        }
+        
+        .contact-icon {
+            font-size: 1.5rem;
+            margin-right: 15px;
+        }
+        
+        .game-description {
+            background: #1f2937;
+            border: 1px solid #374151;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            color: #60a5fa;
+            text-decoration: underline;
+        }
+        
+        strong {
+            color: #ffffff;
+        }
+        
+        .email-link {
+            color: #3b82f6;
+            font-weight: 500;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            h2 {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Game</a>
+        
+        <h1>About LYTIC</h1>
+
+        <div class="game-description">
+            <p>LYTIC is a modern code-breaking puzzle game that challenges your logical reasoning skills. Crack secret numerical codes using deduction and strategy - no luck required, just pure logic!</p>
+        </div>
+
+        <h2>🎯 How It Works</h2>
+        <ul>
+            <li>Computer generates a secret code (4-7 digits)</li>
+            <li>Make guesses to narrow down the possibilities</li>
+            <li>Use feedback to eliminate wrong combinations</li>
+            <li>Solve the code in the fewest attempts possible</li>
+        </ul>
+
+        <h2>🎮 Game Features</h2>
+        <ul>
+            <li><strong>Multiple Difficulty Levels:</strong> 4-digit (Easy) to 7-digit (Expert)</li>
+            <li><strong>Strategy Grid:</strong> Visual tool to track your deductions</li>
+            <li><strong>Performance Tracking:</strong> Save your best scores and statistics</li>
+            <li><strong>Mobile Friendly:</strong> Play anywhere on any device</li>
+            <li><strong>Completely Free:</strong> No ads interrupting gameplay</li>
+        </ul>
+
+        <h2>📞 Contact</h2>
+        
+        <div class="contact-card">
+            <h3>Get in Touch</h3>
+            <p>Questions, feedback, or need help? We'd love to hear from you!</p>
+            
+            <div class="contact-method">
+                <span class="contact-icon">📧</span>
+                <div>
+                    <strong>Email:</strong> <a href="mailto:roman@lytic.co.uk" class="email-link">roman@lytic.co.uk</a><br>
+                    <small>Response within 24 hours</small>
+                </div>
+            </div>
+        </div>
+
+        <h2>💡 Feedback Welcome</h2>
+        <p>Help us improve LYTIC! We especially appreciate:</p>
+        <ul>
+            <li>Bug reports and technical issues</li>
+            <li>Feature suggestions and ideas</li>
+            <li>General feedback about your experience</li>
+            <li>Accessibility improvement suggestions</li>
+        </ul>
+
+        <div class="highlight">
+            <p><strong>About the Developer</strong></p>
+            <p>LYTIC is created and maintained by Roman, a puzzle enthusiast passionate about building engaging logic games that challenge the mind while remaining fun and accessible to everyone.</p>
+        </div>
+
+        <h2>📋 Legal</h2>
+        <p>By using LYTIC, you agree to our policies:</p>
+        <ul>
+            <li><a href="terms.html">Terms of Service</a> - Rules and guidelines</li>
+            <li><a href="privacy.html">Privacy Policy</a> - How we handle your data</li>
+        </ul>
+
+        <p style="text-align: center; margin-top: 40px;">
+            <a href="index.html" class="back-link">← Return to LYTIC Game</a>
+        </p>
+    </div>
+</body>
+</html>

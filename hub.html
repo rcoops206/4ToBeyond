@@ -1855,7 +1855,6 @@
     </script>
 </body>
 
-<!-- Add this footer to your main game HTML -->
 <footer class="legal-footer">
     <div class="footer-content">
         <div class="footer-links">
@@ -1865,50 +1864,63 @@
         </div>
         <p class="footer-text">&copy; 2025 LYTIC Game. All rights reserved.</p>
     </div>
-</footer>
+  </footer>
+</body>
 
 <style>
-.legal-footer {
-    margin-top: 60px;
-    padding: 30px 0;
-    border-top: 1px solid rgba(148, 163, 184, 0.2);
-    text-align: center;
-    background: rgba(15, 23, 42, 0.5);
-}
-
-.footer-content {
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-
-.footer-links {
-    margin-bottom: 15px;
-}
-
-.footer-links a {
-    color: #94a3b8;
-    text-decoration: none;
-    margin: 0 20px;
-    font-size: 14px;
-    transition: color 0.3s ease;
-}
-
-.footer-links a:hover {
-    color: #60a5fa;
-}
-
-.footer-text {
-    color: #6b7280;
-    font-size: 12px;
+/* Make body take full height and use flex */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
     margin: 0;
 }
 
-@media (max-width: 600px) {
-    .footer-links a {
-        display: block;
-        margin: 10px 0;
-    }
+/* Push footer to bottom */
+.page-content {
+    flex: 1;
+}
+
+/* Footer Container */
+.legal-footer {
+    width: 100%;
+    padding: 2rem 2rem;
+    display: flex;
+    justify-content: center;
+    background: rgba(20, 20, 30, 0.8);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Footer Content */
+.footer-content {
+    text-align: center;
+    max-width: 800px;
+}
+
+/* Footer Links */
+.footer-links {
+    margin-bottom: 1rem;
+}
+
+.footer-links a {
+    margin: 0 1rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.footer-links a:hover {
+    background: linear-gradient(135deg, #ffffff 0%, #a78bfa 50%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Footer Text */
+.footer-text {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.5);
 }
 </style>
 </html> 

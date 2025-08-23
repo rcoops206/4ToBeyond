@@ -34,10 +34,13 @@
         </div>
     </div>
 
-    <!-- Reset Button -->
+    <!-- Reset Button and Help -->
     <div class="reset-nav">
         <button class="reset-button" onclick="showGameSetup()">
             🔄 <span>Reset</span>
+        </button>
+        <button class="help-button" onclick="showHelpModal()">
+            ❓ <span>Help</span>
         </button>
     </div>
 
@@ -326,9 +329,156 @@
         </div>
     </div>
 
+    <!-- Help Modal -->
+    <div class="modal-overlay" id="helpModal">
+        <div class="modal help-modal">
+            <div class="help-header">
+                <div class="help-icon">🎮</div>
+                <h2 class="help-title">LYTIC – Quick Start Guide</h2>
+                <button class="help-close" onclick="closeModal('help', false)">×</button>
+            </div>
+            <div class="help-content">
+                <div class="help-section">
+                    <div class="help-section-icon">🎯</div>
+                    <h3 class="help-section-title">Goal</h3>
+                    <p>Crack the <strong>secret number code</strong> by using logic and deduction. The fewer guesses and the faster you solve, the higher your score!</p>
+                </div>
+
+                <div class="help-section">
+                    <div class="help-section-icon">🔢</div>
+                    <h3 class="help-section-title">How to Play</h3>
+                    
+                    <div class="help-subsection">
+                        <h4>1. Choose Your Difficulty</h4>
+                        <div class="difficulty-levels">
+                            <div class="difficulty-level easy">
+                                <span class="level-name">Easy (4 digits)</span>
+                                <span class="level-desc">Great for beginners – fewer possibilities</span>
+                            </div>
+                            <div class="difficulty-level medium">
+                                <span class="level-name">Medium (5 digits)</span>
+                                <span class="level-desc">More complex – requires structured guessing</span>
+                            </div>
+                            <div class="difficulty-level hard">
+                                <span class="level-name">Hard (6 digits)</span>
+                                <span class="level-desc">Serious challenge – advanced logic needed</span>
+                            </div>
+                            <div class="difficulty-level expert">
+                                <span class="level-name">Expert (7 digits)</span>
+                                <span class="level-desc">For master codebreakers – millions of combinations!</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="help-subsection">
+                        <h4>2. Make a Guess</h4>
+                        <ul>
+                            <li>Enter a number with the <strong>same number of digits</strong> as the code</li>
+                            <li>Each guess is tested against the secret code</li>
+                        </ul>
+                        <div class="help-tip">
+                            <span class="tip-icon">👉</span>
+                            <span>Example: If the secret code has 5 digits, all of your guesses must also be 5 digits.</span>
+                        </div>
+                    </div>
+
+                    <div class="help-subsection">
+                        <h4>3. Read the Feedback</h4>
+                        <p>After every guess, you'll get feedback:</p>
+                        <ul>
+                            <li>It tells you <strong>how many digits are correct AND in the right position</strong></li>
+                            <li>It does <strong>not</strong> tell you <em>which</em> digits are correct – that's the puzzle!</li>
+                        </ul>
+                        <div class="help-example">
+                            <div class="example-header">⚡ Example:</div>
+                            <div class="example-content">
+                                <div class="example-line">Secret code: <code>7239</code></div>
+                                <div class="example-line">Your guess: <code>7145</code></div>
+                                <div class="example-line">Feedback: <strong>"1 correct"</strong> (only the <code>7</code> in position 1 matches)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="help-subsection">
+                        <h4>4. Use Logic to Improve</h4>
+                        <ul>
+                            <li><strong>Eliminate</strong> digits that don't work</li>
+                            <li><strong>Confirm</strong> digits that are correct</li>
+                            <li><strong>Refine</strong> guesses step by step until the whole code is solved</li>
+                        </ul>
+                        <div class="help-callout">
+                            It's like cracking a safe: every piece of feedback narrows the possibilities!
+                        </div>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <div class="help-section-icon">🛠</div>
+                    <h3 class="help-section-title">Tools to Help You</h3>
+                    <ul>
+                        <li><strong>Strategy Grid</strong> – Mark which digits can or can't go in each position</li>
+                        <li><strong>Guess History</strong> – Review all past guesses and feedback to avoid repeating mistakes</li>
+                        <li><strong>Real-Time Feedback</strong> – See progress immediately after each guess</li>
+                    </ul>
+                </div>
+
+                <div class="help-section">
+                    <div class="help-section-icon">🏆</div>
+                    <h3 class="help-section-title">Scoring</h3>
+                    <p>Your score depends on:</p>
+                    <div class="scoring-factors">
+                        <div class="factor">
+                            <span class="factor-icon">⚡</span>
+                            <span><strong>Fewer Guesses = Higher Score</strong></span>
+                        </div>
+                        <div class="factor">
+                            <span class="factor-icon">⏱️</span>
+                            <span><strong>Faster Solving = Bonus Points</strong></span>
+                        </div>
+                        <div class="factor">
+                            <span class="factor-icon">🎯</span>
+                            <span><strong>Harder Difficulty = Bigger Rewards</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <div class="help-section-icon">💡</div>
+                    <h3 class="help-section-title">Pro Tips</h3>
+                    <div class="pro-tips">
+                        <div class="tip">
+                            <span class="tip-title">Start Broad:</span>
+                            <span>Use early guesses to test as many different digits as possible.</span>
+                        </div>
+                        <div class="tip">
+                            <span class="tip-title">Be Systematic:</span>
+                            <span>Don't guess randomly—use the feedback to eliminate options.</span>
+                        </div>
+                        <div class="tip">
+                            <span class="tip-title">Narrow Down:</span>
+                            <span>Once you know a digit is correct, test where it belongs.</span>
+                        </div>
+                        <div class="tip">
+                            <span class="tip-title">Think Ahead:</span>
+                            <span>Each guess should give you maximum information, not just a lucky shot.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="help-section">
+                    <div class="help-section-icon">🎉</div>
+                    <h3 class="help-section-title">Winning</h3>
+                    <p>You win by cracking the <strong>entire code</strong>! Each correct digit locks into place, and the game celebrates when you solve it. 🏅</p>
+                </div>
+            </div>
+            <div class="help-footer">
+                <button class="btn btn-primary help-play-btn" onclick="closeHelpAndStartGame()">Start Playing!</button>
+            </div>
+        </div>
+    </div>
+
     <script src="game.js"></script>
 </body>
-
 
 <!-- Add this footer to your main game HTML -->
 <footer class="legal-footer">
@@ -340,64 +490,6 @@
         </div>
         <p class="footer-text">&copy; 2025 LYTIC Game. All rights reserved.</p>
     </div>
-  </footer>
+</footer>
 </body>
-
-<style>
-/* Make body take full height and use flex */
-body {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    margin: 0;
-}
-
-/* Push footer to bottom */
-.page-content {
-    flex: 1;
-}
-
-/* Footer Container */
-.legal-footer {
-    width: 100%;
-    padding: 2rem 2rem;
-    display: flex;
-    justify-content: center;
-    background: rgba(20, 20, 30, 0.8);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Footer Content */
-.footer-content {
-    text-align: center;
-    max-width: 800px;
-}
-
-/* Footer Links */
-.footer-links {
-    margin-bottom: 1rem;
-}
-
-.footer-links a {
-    margin: 0 1rem;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.7);
-    text-decoration: none;
-    transition: all 0.3s ease;
-}
-
-.footer-links a:hover {
-    background: linear-gradient(135deg, #ffffff 0%, #a78bfa 50%, #06b6d4 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-/* Footer Text */
-.footer-text {
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.5);
-}
-</style>
-
 </html>

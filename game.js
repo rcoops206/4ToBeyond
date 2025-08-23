@@ -1077,15 +1077,6 @@ window.addEventListener('beforeunload', function() {
     }
 });
 
-
-
-// Close help modal when clicking overlay
-const helpModal = document.getElementById('helpModal');
-if (e.target === helpModal) {
-    closeModal('help', false);
-}
-
-
 // Network status handling
 window.addEventListener('online', syncLocalBackup);
 window.addEventListener('offline', function() {
@@ -1167,16 +1158,3 @@ document.addEventListener('DOMContentLoaded', function() {
 window.addEventListener('load', initializeApp);
 
 console.log('🎮 Enhanced universal saving system with modals loaded and ready!');
-
-
-// ===== HELP MODAL =====
-function showHelpModal() {
-    showModal('helpModal');
-}
-
-function closeHelpAndStartGame() {
-    closeModal('help', false);
-    setTimeout(() => {
-        showGameSetup();
-    }, 300);
-}
